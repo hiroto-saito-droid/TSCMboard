@@ -231,7 +231,7 @@ function cs_getSheet_() {
 
 // ボードの本番URL。実際のデプロイ後、WEBAPP_BASE_URLを配布URL(ドメイン制限デプロイの
 // 「/a/macros/adval.jp/s/...」形式)に更新すること。未確定の間はプレースホルダのまま。
-var WEBAPP_BASE_URL = 'https://script.google.com/a/macros/adval.jp/s/REPLACE_AFTER_DEPLOY/exec';
+var WEBAPP_BASE_URL = 'https://script.google.com/a/macros/adval.jp/s/AKfycbyO0Xl34kgotu9GaJTUdVySxeeFRMnbwbVFHM3LUvS5ml8Uh18FfWqeo1e6i_eDSn8reA/exec';
 
 // 案件詳細ページ(?case=xxx)へのHYPERLINK式を生成する（案件データシートから直接開けるように）。
 function cs_caseUrlFormula_(caseId) {
