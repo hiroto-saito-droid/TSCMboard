@@ -1,0 +1,702 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no"><title>TSCM 管理ボード</title><style>*,*::before,*::after{box-sizing:border-box}
+body{font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans',Meiryo,sans-serif;background:#0f172a;margin:0;color:#e2e8f0;font-size:13px}
+.top{position:sticky;top:0;z-index:10;background:#0b1220;border-bottom:1px solid #1e293b;padding:10px 18px}
+.top .h1{font-size:15px;font-weight:800;color:#fff;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.top .sub{font-size:11px;color:#64748b;font-weight:400}
+.pill{font-size:10px;border-radius:6px;padding:2px 8px;font-weight:800}
+.vbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;padding:8px 10px;background:#0e1a30;border:1px solid #24406e;border-radius:10px}
+.vbar label{font-size:11px;color:#93c5fd;font-weight:800}
+.chip{background:#1e293b;border:1px solid #334155;border-radius:20px;padding:4px 10px;font-size:11px;color:#cbd5e1;display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.chip.active{background:#1d4ed8;border-color:#1d4ed8;color:#fff;font-weight:800}
+.chip button{background:none;border:none;color:inherit;cursor:pointer;font-size:13px;padding:0;line-height:1}
+.addbtn{background:#0e7a5f;border:none;color:#fff;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:800;cursor:pointer}
+.tabs{display:flex;gap:4px;margin-top:10px;flex-wrap:wrap}
+.tabs button{background:none;border:none;color:#94a3b8;font-weight:700;font-size:13px;padding:8px 14px;cursor:pointer;border-bottom:2px solid transparent}
+.tabs button.active{color:#60a5fa;border-bottom-color:#3b82f6;background:#0e1a30}
+.wrap{max-width:1120px;margin:0 auto;padding:16px 18px 70px}
+.pane{display:none} .pane.active{display:block}
+.banner{background:#12203a;border:1px solid #24406e;border-radius:10px;padding:9px 13px;margin-bottom:12px;font-size:12px;color:#bcd2f5} .banner b{color:#fff}
+.legend{font-size:11px;color:#64748b;margin:2px 0 12px;display:flex;gap:14px;flex-wrap:wrap}
+select,input,textarea{font-family:inherit;background:#111827;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:6px 9px;font-size:12px}
+select:focus,input:focus,textarea:focus{outline:none;border-color:#3b82f6}
+.cat{border-radius:12px;margin-bottom:14px;overflow:hidden;border:1px solid #1e293b}
+.cat>.head{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-weight:800;font-size:13px;color:#fff}
+.cat .head .count{font-size:10.5px;font-weight:600;opacity:.85} .cat .head .chev{margin-left:auto}
+.cat.collapsed .body{display:none} .cat.collapsed .chev{transform:rotate(-90deg)}
+.body{background:#0b1220;padding:12px 14px}
+.row{display:grid;grid-template-columns:250px 1fr;gap:12px;padding:8px 0;border-bottom:1px dashed #1e293b;align-items:start} .row:last-child{border-bottom:none}
+.row.hidden{display:none}
+.lbl{font-weight:700;color:#e2e8f0;font-size:12px;padding-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tag{font-size:9.5px;font-weight:800;border-radius:4px;padding:1px 6px}
+.tag.new{background:#0f2a1c;border:1px solid #2f8a55;color:#67c98c}
+.tag.rk{background:#3b0764;border:1px solid #a855f7;color:#e9d5ff}
+.tag.ct{background:#164e63;border:1px solid #06b6d4;color:#a5f3fc}
+.tag.ml{background:#7c2d12;border:1px solid #f97316;color:#fed7aa}
+.taxbadge{font-size:9.5px;font-weight:800;border-radius:4px;padding:1px 6px;margin-left:4px;display:inline-block}
+.taxbadge.ex{background:#3b1d0a;border:1px solid #d97706;color:#fbbf24}
+.taxbadge.in{background:#1e1b4b;border:1px solid #6366f1;color:#a5b4fc}
+.field{display:flex;flex-direction:column;gap:6px} .field .ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.field select,.field input[type=text]{min-width:240px} .timerange{display:flex;gap:6px;align-items:center}
+textarea{width:100%;min-height:54px;resize:vertical}
+.memo{width:100%;background:#0e1626;border:1px dashed #334155;color:#cbd5e1;font-size:11px;border-radius:8px;padding:6px 9px} .memo::placeholder{color:#5b6b85}
+.tools{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.tools details{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:8px 12px}
+.tools summary{cursor:pointer;font-weight:800;color:#93c5fd;font-size:12px}
+.tools textarea{margin-top:8px;min-height:130px;font-size:12px}
+.toolbtn{background:#1d4ed8;border:none;color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;margin:8px 6px 0 0}
+.toolbtn.sec{background:#334155;color:#cbd5e1}
+.richbar{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.richbar select{padding:5px 8px}
+.richedit{width:100%;background:#111827;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px 10px;font-size:12px;white-space:pre-wrap;overflow-y:auto}
+.richedit:focus{outline:none;border-color:#3b82f6}
+.cfg{background:#0b1220;border:1px solid #1e293b;border-radius:10px;padding:14px;margin-bottom:12px}
+.cfg h3{margin:0 0 8px;font-size:13px;color:#fff;border-left:4px solid #f43f5e;padding-left:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fee{width:100%;border-collapse:collapse;font-size:11px}.fee th,.fee td{border:1px solid #334155;padding:4px 7px}.fee th{background:#111827}
+.sign{border:2px solid #f43f5e;border-radius:8px;padding:12px;margin-top:10px;background:#1a0f14}
+.sign .st{font-weight:800;color:#fda4af;margin-bottom:8px}
+.chk{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;margin:6px 0}
+.sign-line{border-bottom:1.5px solid #64748b;height:40px;margin-top:20px}
+.layoutbox{border:1px dashed #334155;background:#0e1626;border-radius:10px;padding:14px;margin-bottom:12px}
+.imgslot{border:1px dashed #475569;border-radius:8px;min-height:150px;display:flex;align-items:center;justify-content:center;color:#64748b;overflow:hidden;background:#0b1220}
+.imgslot img{max-width:100%;max-height:340px}
+.uploadbar{display:flex;gap:10px;align-items:center;margin:8px 0;flex-wrap:wrap}
+.filebtn{display:inline-flex;align-items:center;gap:6px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.filebtn input{display:none}
+.clearbtn{background:#334155;color:#cbd5e1;border:none;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer}
+.footer{color:#475569;font-size:11px;text-align:center;margin-top:20px}
+label.inl{display:flex;gap:6px;align-items:center;font-size:12px;color:#cbd5e1}
+.venuenote{font-size:11px;color:#f0b866;margin-left:6px}
+.case-url-box{position:fixed;top:60px;right:20px;background:#0e1626;border:1px solid #0ea5e9;border-radius:8px;padding:10px;z-index:1001;display:flex;gap:6px;align-items:center;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.case-url-box input{width:340px;padding:6px;border-radius:4px;border:1px solid #334155;background:#0b1220;color:#e2e8f0}
+.case-url-box button{background:none;border:none;color:#94a3b8;font-size:16px;cursor:pointer}
+/* ここから下はタブレット・スマートフォン専用。PC表示（下記条件を満たさない画面幅）には一切影響しない */
+@media (max-width:900px){
+  .grid2{grid-template-columns:1fr}
+  .wrap{padding:14px 12px 70px}
+}
+@media (max-width:640px){
+  .top{padding:8px 12px}
+  .top .h1{font-size:13px;gap:6px}
+  .top .sub{display:block;width:100%;margin-top:2px}
+  .wrap{padding:10px 8px 70px}
+  .row{grid-template-columns:1fr;gap:4px;padding:10px 0}
+  .lbl{padding-top:0}
+  .field select,.field input[type=text]{min-width:0;width:100%}
+  .field .ctl{width:100%}
+  select,input,textarea{font-size:13px}
+  .timerange{flex-wrap:wrap}
+  .fee{font-size:10px}
+  .fee th,.fee td{padding:3px 4px}
+  .cfg{padding:10px}
+  .case-url-box{left:8px;right:8px;top:auto;bottom:8px;width:auto}
+  .case-url-box input{width:100%;flex:1}
+  .uploadbar{gap:6px}
+  .vbar input[type=text]{width:100%;min-width:0}
+}
+</style></head><body>
+<div class="top"><div class="h1">TSCM 管理ボード<span class="sub">TIMESHARINGシリーズ全会場向け・会場自由入力・標準オプション共通マスタ駆動</span>
+<span id="statusPill" class="pill" style="background:#64748b33;color:#cbd5e1;border:1px solid #64748b">ステータス未設定</span>
+<button id="saveCaseBtn" onclick="saveCurrentCase()" class="pill" style="background:#16a34a33;color:#86efac;border:1px solid #16a34a;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="現在の入力内容を保存">💾 保存</button>
+<button id="loadCaseBtn" onclick="openLoadCaseModal()" class="pill" style="background:#7c3aed33;color:#c4b5fd;border:1px solid #7c3aed;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="保存済みの案件を読み込む">📂 読み込み</button>
+<button id="caseUrlBtn" onclick="outputCaseUrl()" class="pill" style="background:#0ea5e933;color:#7dd3fc;border:1px solid #0ea5e9;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="この案件のURLを発行してコピー（未保存の場合は保存してから発行）">🔗 URL出力</button>
+<span id="saveCaseStatus" style="font-size:11px;color:#94a3b8"></span></div>
+<div id="loadCaseModal" onclick="if(event.target===this)closeLoadCaseModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:#0e1626;border:1px solid #334155;border-radius:10px;padding:20px;width:600px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h3 style="margin:0;color:#e2e8f0">保存済み案件を読み込む</h3>
+      <button onclick="closeLoadCaseModal()" style="background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <input id="loadCaseSearch" type="text" placeholder="会社名・担当者・会場名で検索…" oninput="renderLoadCaseList()" style="margin-bottom:10px;padding:8px;border-radius:6px;border:1px solid #334155;background:#0b1220;color:#e2e8f0">
+    <div id="loadCaseList" style="overflow-y:auto;flex:1"></div>
+  </div>
+</div>
+<div class="vbar" id="vbar"></div>
+<div class="tabs">
+<button data-tab="hearing" class="active">① ヒアリングシート</button>
+<button data-tab="layout">② レイアウト</button>
+<button data-tab="confirmation">③ 利用確認書</button>
+</div></div>
+<div class="wrap">
+<div id="hearing" class="pane active"></div>
+<div id="layout" class="pane"></div>
+<div id="confirmation" class="pane"></div>
+<div class="footer">会場自由入力・標準オプション共通マスタ駆動（ヒアリング項目・標準オプション・共有事項テンプレはスプレッドシートから読込）。データは案件履歴に保存。</div>
+</div><script>
+let STANDARD_OPTIONS=[];   // apiGetStandardOptions()
+let FAVORITE_VENUES=[];    // apiGetFavoriteVenues()
+let HEARING=[];            // apiGetFormSchema()（会場非依存・単一マスタ）
+let STAFF_TEMPLATE='';     // apiGetStaffTemplate()
+const esc=s=>(s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const CAT_PALETTE=['#2563eb','#db2777','#059669','#d97706','#7c3aed','#0891b2','#be123c','#4d7c0f'];
+function catColor(idx){return CAT_PALETTE[idx%CAT_PALETTE.length];}
+let state={blocks:[{id:1,venueName:'',venueAddress:'',snap:null}],active:1,seq:1};
+let currentCaseId=null;
+// アップロード画像(layoutImgs)はデータ量が大きく、スプレッドシートのセル文字数上限に
+// 抵触しうるため、案件データとしての保存対象からは除外する（利用確認書PDFへの反映のみ）。
+function blocksForSave_(){return state.blocks.map(b=>{const c=Object.assign({},b);delete c.layoutImgs;return c;});}
+function saveCurrentCase(){
+  snapshot();
+  const b=activeBlock();
+  const payload={caseId:currentCaseId,venueName:b.venueName||'',venueAddress:b.venueAddress||'',company:q('会社名'),client:q('担当者'),blocks:blocksForSave_()};
+  const status=document.getElementById('saveCaseStatus');
+  if(status)status.textContent='保存中…';
+  google.script.run.withSuccessHandler(function(r){
+    let res={};try{res=JSON.parse(r);}catch(e){}
+    if(res.caseId)currentCaseId=res.caseId;
+    if(status)status.textContent='保存しました（'+(res.savedAt||'')+'）';
+  }).withFailureHandler(function(err){
+    if(status)status.textContent='保存エラー: '+err;
+  }).saveCase(JSON.stringify(payload));
+}
+let loadCaseData=[];
+function openLoadCaseModal(){
+  document.getElementById('loadCaseModal').style.display='flex';
+  document.getElementById('loadCaseSearch').value='';
+  document.getElementById('loadCaseList').innerHTML='読み込み中…';
+  google.script.run.withSuccessHandler(function(r){
+    try{loadCaseData=JSON.parse(r)||[];}catch(e){loadCaseData=[];}
+    renderLoadCaseList();
+  }).withFailureHandler(function(err){
+    document.getElementById('loadCaseList').innerHTML='取得エラー: '+esc(String(err));
+  }).listCases();
+}
+function closeLoadCaseModal(){document.getElementById('loadCaseModal').style.display='none';}
+function renderLoadCaseList(){
+  const kw=(document.getElementById('loadCaseSearch').value||'').toLowerCase();
+  const filtered=loadCaseData.filter(c=>!kw||[c.company,c.client,c.venueName].some(s=>(s||'').toLowerCase().includes(kw)));
+  const host=document.getElementById('loadCaseList');
+  if(!filtered.length){host.innerHTML='<div style="color:#64748b;padding:10px">'+(loadCaseData.length?'該当する案件がありません':'保存済みの案件がまだありません')+'</div>';return;}
+  host.innerHTML=filtered.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:10px;border-bottom:1px solid #1e293b">
+    <div onclick="loadCaseById('${esc(c.caseId)}')" style="flex:1;cursor:pointer">
+      <div style="color:#e2e8f0;font-weight:600">${esc(c.company||'(会社名未入力)')}${c.client?'　／　'+esc(c.client):''}</div>
+      <div style="color:#94a3b8;font-size:12px">${esc(c.venueName||'(会場未入力)')}　更新: ${esc(c.updatedAt||'')}${c.updatedBy?'（'+esc(c.updatedBy)+'）':''}</div>
+    </div>
+    <button type="button" onclick="event.stopPropagation();deleteCaseById('${esc(c.caseId)}')" title="この案件を削除" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:16px;padding:4px">🗑</button>
+  </div>`).join('');
+}
+function deleteCaseById(caseId){
+  if(!confirm('この案件データを完全に削除します。元に戻せません。よろしいですか？'))return;
+  google.script.run.withSuccessHandler(function(){
+    loadCaseData=loadCaseData.filter(c=>c.caseId!==caseId);
+    renderLoadCaseList();
+  }).withFailureHandler(function(err){
+    alert('削除エラー: '+err);
+  }).deleteCase(caseId);
+}
+function loadCaseById(caseId){
+  closeLoadCaseModal();
+  const status=document.getElementById('saveCaseStatus');
+  if(status)status.textContent='読み込み中…';
+  google.script.run.withSuccessHandler(function(r){
+    let res={};try{res=JSON.parse(r);}catch(e){}
+    if(res.error){if(status)status.textContent='読み込みエラー: '+res.error;return;}
+    currentCaseId=res.caseId;
+    const blocks=(res.blocks&&res.blocks.length)?res.blocks:[{id:1,venueName:res.venueName||'',venueAddress:res.venueAddress||'',snap:null}];
+    let maxId=0; blocks.forEach(b=>{if(b.id>maxId)maxId=b.id;});
+    state={blocks:blocks,active:blocks[0].id,seq:maxId};
+    renderAll();
+    if(status)status.textContent='読み込みました（'+(res.updatedAt||'')+'）';
+  }).withFailureHandler(function(err){
+    if(status)status.textContent='読み込みエラー: '+err;
+  }).loadCase(caseId);
+}
+function showCaseUrl(url){
+  let box=document.getElementById('caseUrlBox');
+  if(!box){
+    box=document.createElement('div');
+    box.id='caseUrlBox';
+    box.className='case-url-box';
+    const inp=document.createElement('input');
+    inp.readOnly=true;
+    inp.onclick=function(){this.select();};
+    const closeBtn=document.createElement('button');
+    closeBtn.textContent='×';
+    closeBtn.onclick=function(){box.style.display='none';};
+    box.appendChild(inp); box.appendChild(closeBtn);
+    document.body.appendChild(box);
+  }
+  box.style.display='flex';
+  const inp=box.querySelector('input');
+  inp.value=url; inp.select();
+  try{document.execCommand('copy');}catch(e){}
+}
+// Apps ScriptのHtmlServiceはページ本体をscript.googleusercontent.comの
+// 内部iframeで配信するため、location.origin/pathnameはそのiframe自身のURLを指してしまい、
+// 実際にアドレスバーに表示されている（共有可能な）URLとは異なる。そのため固定値を使う。
+// ※実際のデプロイ後、OptionMaster.gsのWEBAPP_BASE_URLと同じ値に必ず更新すること。
+const WEBAPP_BASE_URL='https://script.google.com/a/macros/adval.jp/s/REPLACE_AFTER_DEPLOY/exec';
+function outputCaseUrl(){
+  const status=document.getElementById('saveCaseStatus');
+  const emit=()=>{
+    const url=WEBAPP_BASE_URL+'?case='+encodeURIComponent(currentCaseId);
+    showCaseUrl(url);
+    if(status)status.textContent='URLをコピーしました';
+  };
+  if(currentCaseId){emit();return;}
+  snapshot();
+  const b=activeBlock();
+  const payload={caseId:null,venueName:b.venueName||'',venueAddress:b.venueAddress||'',company:q('会社名'),client:q('担当者'),blocks:blocksForSave_()};
+  if(status)status.textContent='保存してURLを発行中…';
+  google.script.run.withSuccessHandler(function(r){
+    let res={};try{res=JSON.parse(r);}catch(e){}
+    if(res.caseId)currentCaseId=res.caseId;
+    emit();
+  }).withFailureHandler(function(err){
+    if(status)status.textContent='保存エラー: '+err;
+  }).saveCase(JSON.stringify(payload));
+}
+function activeBlock(){return state.blocks.find(b=>b.id===state.active);}
+function ctl(it){
+  const t=it.type,val=it.value||'',di='data-item="'+esc(it.item)+'"';
+  if(t==='select'){
+    const opts=it.options||[];
+    const hasOther=opts.indexOf('その他')>-1;
+    let selVal=val,otherVal='';
+    const om=/^その他（(.*)）$/.exec(val);
+    if(om){selVal='その他';otherVal=om[1];}
+    const o=opts.map(op=>`<option ${op===selVal?'selected':''}>${esc(op)}</option>`).join('');
+    let html=`<select ${di}><option value="">選択</option>${o}</select>`;
+    if(hasOther)html+=`<input type="text" class="other-input" style="margin-left:6px;display:${selVal==='その他'?'inline-block':'none'}" placeholder="その他の内容" value="${esc(otherVal)}">`;
+    return html;
+  }
+  if(t==='date')return `<input ${di} type="date" value="${esc(val)}">`;
+  if(t==='datetime')return `<input ${di} type="text" value="${esc(val)}" style="min-width:200px" placeholder="YYYY-MM-DDTHH:MM">`;
+  if(t==='timerange'){let a='',b='';if(val&&val.indexOf('～')>-1){const p=val.split('～');a=p[0];b=p[1];}return `<div class="timerange" ${di}><input type="time" value="${a}"> 〜 <input type="time" value="${b}"></div>`;}
+  if(t==='textarea')return `<textarea ${di}>${esc(val)}</textarea>`;
+  return `<input ${di} type="text" value="${esc(val)}" placeholder="入力">`;
+}
+function getEl(item){const host=document.getElementById('hearing');if(!host)return null;return [...host.querySelectorAll('[data-item]')].find(e=>e.getAttribute('data-item')===item);}
+function readCtl(el){
+  if(el.classList&&el.classList.contains('timerange')){const t=el.querySelectorAll('input[type=time]');const a=t[0].value,b=t[1].value;return (a||b)?(a+'～'+b):'';}
+  let v=el.value||'';
+  if(el.tagName==='SELECT'&&v==='その他'){
+    const fl=el.closest('.field');const ot=fl?fl.querySelector('.other-input'):null;
+    if(ot&&ot.value.trim())v='その他（'+ot.value.trim()+'）';
+  }
+  return v;
+}
+function writeCtl(el,v){
+  if(el.classList&&el.classList.contains('timerange')){const t=el.querySelectorAll('input[type=time]');if(v&&v.indexOf('～')>-1){const p=v.split('～');t[0].value=p[0];t[1].value=p[1];}else{t[0].value='';t[1].value='';}return;}
+  if(el.tagName==='SELECT'){
+    const m=/^その他（(.*)）$/.exec(String(v));
+    const fl=el.closest('.field');const ot=fl?fl.querySelector('.other-input'):null;
+    if(m){el.value='その他';if(ot){ot.value=m[1];ot.style.display='inline-block';}}
+    else{el.value=v;if(ot)ot.style.display=(v==='その他')?'inline-block':'none';}
+    el.dispatchEvent(new Event('change'));
+    return;
+  }
+  el.value=v;
+}
+function snapshot(){
+  const b=activeBlock();
+  if(!document.querySelector('#hearing [data-item]'))return;
+  const vals={},memos={};
+  document.querySelectorAll('#hearing [data-item]').forEach(el=>{
+    const it=el.getAttribute('data-item');
+    vals[it]=readCtl(el);
+    const fl=el.closest('.field');
+    const mm=fl?fl.querySelector('.memo'):null;
+    memos[it]=mm?mm.value:'';
+  });
+  b.snap={vals,memos};
+}
+function blankSnap(){const vals={},memos={};HEARING.forEach(s=>s.items.forEach(it=>{vals[it.item]='';memos[it.item]='';}));return {vals,memos};}
+function restore(snap){
+  if(!snap)return;
+  Object.keys(snap.vals).forEach(it=>{const el=getEl(it);if(el)writeCtl(el,snap.vals[it]);});
+  Object.keys(snap.memos||{}).forEach(it=>{const el=getEl(it);if(el){const mm=el.closest('.field').querySelector('.memo');if(mm)mm.value=snap.memos[it];}});
+}
+function renderVenueBar(){
+  const b=activeBlock();
+  const chips=state.blocks.map(bl=>`<span class="chip ${bl.id===state.active?'active':''}" onclick="switchBlock(${bl.id})">${esc(bl.venueName||'(会場未入力)')}${state.blocks.length>1?` <button onclick="event.stopPropagation();removeBlock(${bl.id})">×</button>`:''}</span>`).join('');
+  const dl=FAVORITE_VENUES.map(v=>`<option value="${esc(v.name)}">`).join('');
+  document.getElementById('vbar').innerHTML=`<label>検討中の会場/日程</label>${chips}
+    <button class="addbtn" onclick="addBlock()">＋会場/日程を追加（複数検討）</button>
+    <span style="margin-left:auto"></span>
+    <label>会場名</label><input id="venueNameInput" type="text" list="favoriteVenueList" value="${esc(b.venueName||'')}" placeholder="会場名を入力（自由記述）" style="min-width:200px">
+    <datalist id="favoriteVenueList">${dl}</datalist>
+    <label>会場住所</label><input id="venueAddressInput" type="text" value="${esc(b.venueAddress||'')}" placeholder="会場住所（自由記述）" style="min-width:220px">
+    <button class="addbtn" style="background:#7c3aed" onclick="registerFavoriteVenue()">＋この会場を登録</button>`;
+  const vn=document.getElementById('venueNameInput');
+  const va=document.getElementById('venueAddressInput');
+  vn.oninput=()=>{activeBlock().venueName=vn.value;};
+  vn.onchange=()=>{
+    // datalist(よく使う会場)から選択された場合、住所が未入力なら自動補完する
+    const hit=FAVORITE_VENUES.find(v=>v.name===vn.value);
+    if(hit&&!va.value.trim()){va.value=hit.address;activeBlock().venueAddress=hit.address;}
+  };
+  va.oninput=()=>{activeBlock().venueAddress=va.value;};
+}
+function registerFavoriteVenue(){
+  const name=(document.getElementById('venueNameInput').value||'').trim();
+  const address=(document.getElementById('venueAddressInput').value||'').trim();
+  if(!name){alert('会場名を入力してください');return;}
+  if(!confirm('「よく使う会場」に登録します。\n会場名: '+name+'\n住所: '+(address||'(未入力)')+'\n\nよろしいですか？'))return;
+  google.script.run.withSuccessHandler(function(r){
+    let res={};try{res=JSON.parse(r);}catch(e){}
+    if(res&&res.error){alert('登録エラー: '+res.error);return;}
+    alert(res&&res.updated?'既存の会場情報を更新しました。':'登録しました。');
+    loadFavoriteVenues_(function(){renderVenueBar();});
+  }).withFailureHandler(function(err){alert('登録エラー: '+err);}).addFavoriteVenue(name,address);
+}
+function loadFavoriteVenues_(cb){
+  if(typeof google!=='undefined'&&google.script&&google.script.run){
+    google.script.run.withSuccessHandler(function(j){try{FAVORITE_VENUES=JSON.parse(j)||[];}catch(e){FAVORITE_VENUES=[];}cb&&cb();})
+      .withFailureHandler(function(err){console.warn('よく使う会場取得失敗',err);FAVORITE_VENUES=[];cb&&cb();})
+      .apiGetFavoriteVenues();
+  }else{cb&&cb();}
+}
+function switchBlock(id){snapshot();state.active=id;renderAll();}
+function addBlock(){snapshot();state.seq++;const cur=activeBlock();const nb={id:state.seq,venueName:cur.venueName||'',venueAddress:cur.venueAddress||'',snap:blankSnap()};state.blocks.push(nb);state.active=nb.id;renderAll();}
+function removeBlock(id){if(state.blocks.length<=1)return;state.blocks=state.blocks.filter(b=>b.id!==id);if(state.active===id)state.active=state.blocks[0].id;renderAll();}
+const RAKU_NOTE={'フル':'現場復帰・ゴミ回収あり','ライト':'現場復帰(15分程度)・ゴミ回収(1袋目安)','なし':''};
+function renderHearing(){
+  const host=document.getElementById('hearing');
+  const b=activeBlock();
+  let html=`<div class="tools">
+    <details><summary>📥 テキスト取込（「テキスト出力」の内容をそのまま貼り付けて「ボードに反映」も可）</summary>
+      <textarea id="importText" placeholder="「テキスト出力」で生成した内容をそのまま貼り付けられます。"></textarea>
+      <div><button class="toolbtn" onclick="doImport()">ボードに反映</button></div></details>
+    <details open><summary>📄 テキスト出力</summary>
+      <div><button class="toolbtn" onclick="doExport()">📝 テキスト出力を生成</button><button class="toolbtn sec" onclick="copyOut()">コピー</button></div>
+      <textarea id="outText" readonly placeholder="「テキスト出力を生成」を押すと表示されます"></textarea></details></div>
+  <div class="banner" id="cateringBanner"></div>
+  <div class="legend"><span><span class="tag new">新設/変更</span>今回の修正</span><span><span class="tag rk">ラクラクパック関連</span></span><span><span class="tag ct">ケータリング関連</span></span><span><span class="tag ml">お食事関連</span></span></div>`;
+  if(!HEARING.length){
+    html+='<div class="banner">ヒアリング項目マスタが未取得、または項目が0件です。「ヒアリング項目マスタ」スプレッドシートを確認してください。</div>';
+  }
+  HEARING.forEach((sec,secIdx)=>{
+    const rows=sec.items.map(it=>{
+      let tag='';
+      if(it.new)tag+='<span class="tag new">新設/変更</span>';
+      if(it.rakuraku)tag+='<span class="tag rk">ラクラクパック関連</span>';
+      if(it.catering)tag+='<span class="tag ct">ケータリング関連</span>';
+      if(it.meal)tag+='<span class="tag ml">お食事関連</span>';
+      const rowcls='row'+(it.catering?' catering-detail':'');
+      const memo=(it.memo||'').split('\n')[0];
+      return `<div class="${rowcls}"><div class="lbl">${esc(it.item)} ${tag}</div>
+        <div class="field"><div class="ctl">${ctl(it)}</div>
+        <input class="memo" type="text" value="${esc(memo)}" placeholder="備考メモ (任意)"></div></div>`;
+    }).join('');
+    html+=`<div class="cat"><div class="head" style="background:${catColor(secIdx)}" data-toggle>
+      <span>${esc(sec.cat)}</span><span class="count">（${sec.items.length}項目）</span><span class="chev">▾</span></div>
+      <div class="body">${rows}
+      <div class="row" style="border:none"><div class="lbl">セクションメモ</div><div class="field"><textarea class="memo" placeholder="このセクション共通の補足メモ…"></textarea></div></div></div></div>`;
+  });
+  host.innerHTML=html;
+  host.querySelectorAll('[data-toggle]').forEach(h=>h.onclick=()=>h.closest('.cat').classList.toggle('collapsed'));
+  host.querySelectorAll('select[data-item]').forEach(sel=>{
+    const fl=sel.closest('.field');const ot=fl?fl.querySelector('.other-input'):null;
+    if(ot)sel.addEventListener('change',()=>{ot.style.display=(sel.value==='その他')?'inline-block':'none';});
+  });
+  const c=getEl('ケータリング区分'); if(c)c.addEventListener('change',applyCatering);
+  const stEl=getEl('ステータス'); if(stEl)stEl.addEventListener('change',updateStatusPill);
+  const rk=getEl('ラクラクパック'); if(rk)rk.addEventListener('change',()=>{const mm=rk.closest('.field').querySelector('.memo'); if(mm&&RAKU_NOTE[rk.value]!==undefined)mm.value=RAKU_NOTE[rk.value];});
+  restore(b.snap);
+  applyCatering();
+  updateStatusPill();
+}
+const STATUS_COLOR={'問合せ':'#0ea5e9','仮予約':'#d97706','本予約':'#f43f5e','失注':'#64748b','見積確定':'#8b5cf6'};
+function updateStatusPill(){
+  const pill=document.getElementById('statusPill'); if(!pill)return;
+  const v=q('ステータス');
+  const color=STATUS_COLOR[v]||'#64748b';
+  pill.textContent=v||'ステータス未設定';
+  pill.style.background=color+'33'; pill.style.color=color; pill.style.borderColor=color;
+}
+// 「ケータリング関連フラグ」が立っている項目行は、ケータリング区分(あれば)が
+// 「なし」のときだけ非表示にする（会場マスタ非依存の汎用ロジック。項目自体が
+// 存在しない場合は何もしない＝常に表示のままとするフェイルセーフ）。
+function applyCatering(){
+  const host=document.getElementById('hearing');
+  const c=getEl('ケータリング区分');
+  const v=c?readCtl(c):'';
+  host.querySelectorAll('.catering-detail').forEach(r=>r.classList.toggle('hidden', !!c && v==='なし'));
+  const banner=document.getElementById('cateringBanner');
+  if(!banner)return;
+  if(c){banner.innerHTML='ケータリング区分：<b>'+esc(v||'未選択')+'</b> → '+(v&&v!=='なし'?'ケータリング関連の項目を表示':v==='なし'?'ケータリング関連の項目は非表示':'区分を選択してください');}
+  else{banner.innerHTML='';}
+}
+function q(item){const el=getEl(item);if(!el)return '';return readCtl(el).trim();}
+function qmemo(item){const el=getEl(item);if(!el)return '';const fl=el.closest('.field');const mm=fl?fl.querySelector('.memo'):null;return mm?mm.value.trim():'';}
+// テキスト出力／取込フォーマット: 「会場」「会場住所」の2行＋カテゴリごとの
+// 「項目\t内容\tメモ」タブ区切り一覧。会場マスタ選択式ではなくなったため、
+// GPCMボードの固定フォーマット出力(buildOutput)・旧バージョン専用パーサ群は廃止し、
+// HEARINGの内容をそのまま網羅的に書き出す/読み戻す汎用形式に一本化した。
+function buildOutput(){
+  const pad2=n=>String(n).padStart(2,'0');
+  const now=new Date();
+  const nowStr=now.getFullYear()+'/'+pad2(now.getMonth()+1)+'/'+pad2(now.getDate())+' '+pad2(now.getHours())+':'+pad2(now.getMinutes());
+  const b=activeBlock();
+  const L=[];
+  L.push('会場\t'+(b.venueName||''));
+  L.push('会場住所\t'+(b.venueAddress||''));
+  L.push('最終更新\t'+nowStr);
+  L.push('');
+  HEARING.forEach(sec=>{
+    L.push(sec.cat);
+    L.push('項目\t内容\tメモ');
+    sec.items.forEach(it=>{
+      L.push(it.item+'\t'+q(it.item)+'\t'+qmemo(it.item));
+    });
+    L.push('');
+  });
+  return L.join('\n');
+}
+function doExport(){document.getElementById('outText').value=buildOutput();}
+function copyOut(){const t=document.getElementById('outText');t.select();try{document.execCommand('copy');}catch(e){}}
+function doImport(){
+  const txt=document.getElementById('importText').value;
+  const lines=txt.split(/\r?\n/);
+  let n=0;
+  lines.forEach(line=>{
+    if(!line||line.indexOf('\t')<0)return;
+    const parts=line.split('\t');
+    const item=(parts[0]||'').trim();
+    const val=(parts[1]!==undefined)?parts[1]:'';
+    const memo=(parts[2]!==undefined)?parts[2]:'';
+    if(!item||item==='項目'||item==='最終更新')return;
+    if(item==='会場'){const el=document.getElementById('venueNameInput');if(el){el.value=val;activeBlock().venueName=val;}return;}
+    if(item==='会場住所'){const el=document.getElementById('venueAddressInput');if(el){el.value=val;activeBlock().venueAddress=val;}return;}
+    const el=getEl(item);
+    if(!el)return;
+    if(el.tagName==='SELECT'&&![...el.options].some(o=>o.value===val))return;
+    writeCtl(el,val);n++;
+    if(memo){const fl=el.closest('.field');const mm=fl?fl.querySelector('.memo'):null;if(mm)mm.value=memo;}
+  });
+  applyCatering();
+  updateStatusPill();
+  alert(n+'件を反映しました');
+}
+function previewImg(input,key){
+  const f=input.files&&input.files[0];const box=document.getElementById(key+'-preview');const nm=document.getElementById(key+'-name');if(!f)return;
+  const rd=new FileReader();rd.onload=e=>{
+    box.innerHTML='<img src="'+e.target.result+'">';if(nm)nm.textContent=f.name;
+    const b=activeBlock();if(!b.layoutImgs)b.layoutImgs={};b.layoutImgs[key]={data:e.target.result,name:f.name};
+  };rd.readAsDataURL(f);
+}
+function clearImg(key){
+  document.getElementById(key+'-preview').innerHTML='ファイルを選択してください';const nm=document.getElementById(key+'-name');if(nm)nm.textContent='';
+  const b=activeBlock();if(b.layoutImgs)delete b.layoutImgs[key];
+}
+function setLayoutMemo(key,val){const b=activeBlock();if(!b.layoutMemo)b.layoutMemo={};b.layoutMemo[key]=val;}
+function setNextLayoutEnabled(val){activeBlock().layoutNextEnabled=(val==='あり');}
+function renderLayout(){
+  const b=activeBlock();const imgs=b.layoutImgs||{};const memo=b.layoutMemo||{};const nextOn=!!b.layoutNextEnabled;
+  document.getElementById('layout').innerHTML=`<div class="banner">レイアウト図（会場：<b>${esc(b.venueName||'(会場未入力)')}</b>）。ファイルから直接アップロード。アップロードした画像は利用確認書PDFにも反映されます。</div>
+  <div class="layoutbox"><div style="font-weight:800;color:#fff;margin-bottom:4px">当日レイアウト</div>
+    <div class="uploadbar"><label class="filebtn">📁 ファイルを選択<input type="file" accept="image/*" onchange="previewImg(this,'day')"></label><button class="clearbtn" onclick="clearImg('day')">クリア</button><span id="day-name" style="font-size:11px;color:#94a3b8">${esc(imgs.day?imgs.day.name:'')}</span></div>
+    <div id="day-preview" class="imgslot">${imgs.day?'<img src="'+imgs.day.data+'">':'ファイルを選択してください'}</div>
+    <div style="margin-top:10px"><label class="inl" style="margin-bottom:4px">画像メモ</label><textarea placeholder="レイアウト補足…" oninput="setLayoutMemo('day',this.value)">${esc(memo.day||'')}</textarea></div></div>
+  <div class="layoutbox"><div style="font-weight:800;color:#fff;margin-bottom:4px">次回レイアウト作成 <select style="margin-left:8px" onchange="setNextLayoutEnabled(this.value)"><option ${!nextOn?'selected':''}>なし</option><option ${nextOn?'selected':''}>あり</option></select></div>
+    <div class="uploadbar"><label class="filebtn">📁 ファイルを選択<input type="file" accept="image/*" onchange="previewImg(this,'next')"></label><button class="clearbtn" onclick="clearImg('next')">クリア</button><span id="next-name" style="font-size:11px;color:#94a3b8">${esc(imgs.next?imgs.next.name:'')}</span></div>
+    <div id="next-preview" class="imgslot">${imgs.next?'<img src="'+imgs.next.data+'">':'ファイルを選択してください'}</div>
+    <div style="margin-top:10px"><label class="inl" style="margin-bottom:4px">画像メモ（次回）</label><textarea placeholder="次回レイアウト備考…" oninput="setLayoutMemo('next',this.value)">${esc(memo.next||'')}</textarea></div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:6px">「次回レイアウト作成」が「あり」の場合のみ、PDFに反映されます。</div></div>
+  <div class="cfg"><h3>◆レイアウト図PDF作成</h3>
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:8px">アップロードしたレイアウト図だけを、利用確認書とは別に横向きPDFとして書き出します（画像1枚につき1ページ、メモ欄を隣に配置）。</div>
+    <button class="toolbtn" onclick="makeLayoutPdf()">📄 レイアウト図PDFを作成</button>
+    <div id="layoutPdfResult" style="font-size:12px;color:#94a3b8;margin-top:8px"></div></div>`;
+}
+function collectLayoutPdfPayload_(){
+  const b=activeBlock();const imgs=b.layoutImgs||{};const memo=b.layoutMemo||{};const nextOn=!!b.layoutNextEnabled;
+  return {venueName:b.venueName||'',venueAddress:b.venueAddress||'',company:q('会社名'),client:q('担当者'),
+    useDate:q('日付'),useTime:q('時間'),
+    layoutDayImg:imgs.day?imgs.day.data:'',layoutDayMemo:memo.day||'',
+    layoutNextImg:(nextOn&&imgs.next)?imgs.next.data:'',layoutNextMemo:nextOn?(memo.next||''):''};
+}
+function makeLayoutPdf(){
+  const b=activeBlock();const imgs=b.layoutImgs||{};
+  const box=document.getElementById('layoutPdfResult');
+  if(!imgs.day&&!(b.layoutNextEnabled&&imgs.next)){if(box)box.textContent='レイアウト図が未アップロードです。先に画像を選択してください。';return;}
+  const d=collectLayoutPdfPayload_();
+  if(box)box.textContent='作成中…';
+  google.script.run.withSuccessHandler(function(r){
+      if(box)box.innerHTML='作成しました：<a href="'+r.fileUrl+'" target="_blank" style="color:#60a5fa">'+esc(r.fileName)+'</a>';
+      window.open(r.fileUrl,'_blank');
+    })
+    .withFailureHandler(function(e){ if(box)box.textContent='PDF作成エラー: '+e; })
+    .generateLayoutPdf(JSON.stringify(d));
+}
+const PAY_PRE=['【事前】GMO銀行振込','【事前】GMOカード決済','【事前】みずほ銀行振込','【当日】現金','【当日】カード決済','【後払い】請求書払い（ビジネスアカウント）','【予約サイト】予約サイト指定方法'];
+const PAY_ADD=['【当日】現金','【当日】カード決済','【後払い】請求書払い（ビジネスアカウント）'];
+const PAY_NOTE_GMO='GMO銀行振込・カード決済の場合：領収書を希望される際は、マイページからダウンロードするようご案内をお願いします。';
+const PAY_NOTE_MIZUHO='みずほ銀行振込の場合：領収書を希望される際は、後日PDFにて発行する旨をお伝えください。';
+const PAY_NOTE_ATO='ご利用月締めの翌月末払いにて請求書を発行いたします。請求書は翌月３営業日以内にビジネスアカウントのマイページよりダウンロード可能となります。';
+const PAY_NOTE_SITE='予約サイトを通じてのお支払いとなります。お支払い方法は予約サイトを通じて、ご確認ください。';
+const PAY_NOTE_TOJITSU='領収書は後日PDFにて発行いたします。\n※ジョブカン領収書は「但書：スペース利用に関する費用として」固定です。';
+function payNoteFor(v){v=v||'';if(/GMO/.test(v))return PAY_NOTE_GMO;if(/みずほ/.test(v))return PAY_NOTE_MIZUHO;if(/後払い/.test(v))return PAY_NOTE_ATO;if(/予約サイト/.test(v))return PAY_NOTE_SITE;if(/当日/.test(v))return PAY_NOTE_TOJITSU;return '';}
+function updatePayNote(){const s=document.getElementById('prePay'),a=document.getElementById('addPay'),n=document.getElementById('payNote');if(!n)return;const pn=s?payNoteFor(s.value):'',an=a?payNoteFor(a.value):'';if(!an||an===pn){n.textContent=pn;}else{n.textContent='【事前確定分の支払方法】'+pn+'\n\n【追加分の支払方法】'+an;}}
+const payOptHtml=a=>a.map(o=>`<option>${o}</option>`).join('');
+function toNum_(v){const n=Number(v);return isNaN(n)?0:n;}
+function ensureStandardFees_(b){
+  if(!b.standardFees){
+    b.standardFees=STANDARD_OPTIONS.map(o=>({code:o.code,name:o.name,kind:o.kind,price:o.price,qty:'',unit:o.unit,taxType:o.taxType,rate:o.rate}));
+  }
+  return b.standardFees;
+}
+function ensureFreeFees_(b){ if(!b.freeFees)b.freeFees=[]; return b.freeFees; }
+function computeMaintenanceFee_(b){
+  const std=ensureStandardFees_(b), free=ensureFreeFees_(b);
+  let rate=5,subtotal=0;
+  std.forEach(o=>{ if(o.code==='MAINT'||o.kind==='percentage'){ if(o.rate)rate=toNum_(o.rate); return; } if(o.taxType==='税込')return; subtotal+=toNum_(o.price)*toNum_(o.qty); });
+  free.forEach(o=>{ if(o.taxType==='税込')return; subtotal+=toNum_(o.price)*toNum_(o.qty); });
+  return Math.round(subtotal*rate/100);
+}
+function addFreeFeeRow(){ensureFreeFees_(activeBlock()).push({name:'',price:'',qty:'',taxType:'税別'});renderConfirmation();}
+function delFreeFeeRow(idx){ensureFreeFees_(activeBlock()).splice(idx,1);renderConfirmation();}
+function refreshMaintFee_(){
+  const b=activeBlock();
+  const std=ensureStandardFees_(b).filter(o=>o.code!=='MAINT'&&o.kind!=='percentage');
+  document.querySelectorAll('#stdFeeTbody tr').forEach((tr,i)=>{
+    const cell=tr.children[3]; const o=std[i]; if(!o||!cell)return;
+    cell.textContent=(o.price!==''&&o.price!=null&&o.qty!==''&&o.qty!=null)?('¥'+(toNum_(o.price)*toNum_(o.qty)).toLocaleString()):'';
+  });
+  const t=document.getElementById('maintFeeText'); if(t)t.textContent='¥'+computeMaintenanceFee_(b).toLocaleString();
+}
+function renderConfirmation(){
+  const b=activeBlock();
+  const std=ensureStandardFees_(b).filter(o=>o.code!=='MAINT'&&o.kind!=='percentage');
+  const free=ensureFreeFees_(b);
+  const taxBadge=t=>`<span class="taxbadge ${t==='税込'?'in':'ex'}">${esc(t||'税別')}</span>`;
+  const stdRows=std.map((o,i)=>`<tr>
+    <td>${esc(o.name)}${o.unit?'（'+esc(o.unit)+'）':''} ${taxBadge(o.taxType)}</td>
+    <td style="width:110px"><input type="number" class="std-price" data-idx="${i}" value="${o.price===''||o.price==null?'':esc(o.price)}" placeholder="${o.kind==='manual'?'当日手入力':''}" style="width:100%;text-align:right"></td>
+    <td style="width:80px"><input type="number" class="std-qty" data-idx="${i}" value="${o.qty===''||o.qty==null?'':esc(o.qty)}" style="width:100%;text-align:right" placeholder="数量"></td>
+    <td style="width:110px;text-align:right;color:#94a3b8">${(o.price!==''&&o.price!=null&&o.qty!==''&&o.qty!=null)?('¥'+(toNum_(o.price)*toNum_(o.qty)).toLocaleString()):''}</td>
+  </tr>`).join('');
+  const freeRows=free.map((o,i)=>`<tr>
+    <td><input type="text" class="free-name" data-idx="${i}" value="${esc(o.name)}" style="width:100%" placeholder="品目名（自由入力）"></td>
+    <td style="width:110px"><input type="number" class="free-price" data-idx="${i}" value="${o.price===''||o.price==null?'':esc(o.price)}" style="width:100%;text-align:right" placeholder="単価"></td>
+    <td style="width:80px"><input type="number" class="free-qty" data-idx="${i}" value="${o.qty===''||o.qty==null?'':esc(o.qty)}" style="width:100%;text-align:right" placeholder="数量"></td>
+    <td style="width:78px"><select class="free-tax" data-idx="${i}"><option ${o.taxType!=='税込'?'selected':''}>税別</option><option ${o.taxType==='税込'?'selected':''}>税込</option></select></td>
+    <td style="width:26px"><button type="button" class="free-del" data-idx="${i}" title="この行を削除" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:14px">×</button></td>
+  </tr>`).join('');
+  const maintFee=computeMaintenanceFee_(b);
+  document.getElementById('confirmation').innerHTML=`
+  <div class="banner">利用確認書（会場：<b>${esc(b.venueName||'(会場未入力)')}</b>${b.venueAddress?'　'+esc(b.venueAddress):''}）。</div>
+  <div class="cfg"><h3>ヘッダ・ご利用内容</h3><div class="grid2">
+    <label class="inl">立会担当 <input id="confAttendant" type="text" value=""></label><label class="inl">営業担当 <input id="confSalesRep" type="text" value=""></label>
+    <label class="inl">利用日（①ヒアリングシートから自動反映） <input id="confUseDate" type="text" value="${esc(q('日付')||'')}" readonly style="background:#0e1626;color:#94a3b8;cursor:not-allowed"></label><label class="inl">利用時間（①ヒアリングシートから自動反映） <input id="confUseTime" type="text" value="${esc(q('時間')||'')}" readonly style="background:#0e1626;color:#94a3b8;cursor:not-allowed"></label></div></div>
+  <div class="cfg"><h3>ご成約内容サマリー（テキスト出力を反映・編集可／太字・文字色を選択して変更可）</h3>
+    <div class="richbar">${richToolbarHtml()}
+      <button class="toolbtn" onclick="document.getElementById('seiyakuSummary').textContent=buildOutput()">🔄 テキスト出力を反映</button>
+    </div>
+    <div id="seiyakuSummary" class="richedit" contenteditable="true" style="min-height:220px"></div></div>
+  <div class="cfg"><h3>◆立会スタッフ共有事項（スタッフ用のみ・編集可／共有事項テンプレ／太字・文字色を選択して変更可）</h3>
+    <div class="richbar">${richToolbarHtml()}</div>
+    <div id="staffShareEdit" class="richedit" contenteditable="true" style="min-height:200px">${esc(STAFF_TEMPLATE)}</div></div>
+  <div class="cfg"><h3>◆標準オプション（全会場共通）</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">スペース延長系は単価未確定(当日手入力)。ゴミ処理・飲み放題の単価はこの案件限定で編集できます（共通マスタ本体は変更されません）。数量・税抜合計は当日記入。</div>
+    <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税抜合計</th></tr></thead><tbody id="stdFeeTbody">${stdRows||'<tr><td colspan="4" style="text-align:center;color:#64748b">共通オプション・料金マスタが未取得です</td></tr>'}</tbody></table>
+    <div style="font-size:11px;color:#93c5fd;margin-top:8px;padding:8px 10px;background:#0e1626;border:1px solid #334155;border-radius:8px">◆維持管理費（税込・自動計算） ＝ 標準+自由記述オプションの税抜合計 × 5% ＝ <b id="maintFeeText" style="color:#fff">¥${maintFee.toLocaleString()}</b></div></div>
+  <div class="cfg"><h3>◆その他オプション（自由記述）</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">会場固有のオプションはこちらに品目名・単価・数量を自由入力してください。</div>
+    <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税表記</th><th></th></tr></thead><tbody id="freeFeeTbody">${freeRows}</tbody></table>
+    <button type="button" class="toolbtn sec" onclick="addFreeFeeRow()" style="margin-top:8px">＋ 品目を追加</button></div>
+  <div class="cfg"><h3>◆お支払い状況</h3><div class="grid2">
+    <label class="inl">事前確定金額 <input id="confPreConfirmed" type="text" value=""></label><label class="inl">事前支払額 <input id="confPrePaid" type="text" value=""></label>
+    <label class="inl">(A)事前確定分未精算額 <input id="confBalance" type="text" value=""></label><label class="inl">支払期限 <input id="confPayDue" type="text" value=""></label>
+    <label class="inl">事前確定分の支払方法 <select id="prePay" onchange="updatePayNote()">${payOptHtml(PAY_PRE)}</select></label>
+    <label class="inl">追加分の支払方法 <select id="addPay" onchange="updatePayNote()">${payOptHtml(PAY_ADD)}</select></label></div>
+    <div style="margin-top:10px"><div style="font-size:11px;font-weight:700;color:#93c5fd;margin-bottom:4px">お支払いに関するご案内（支払方法により自動切替）</div>
+    <div id="payNote" style="white-space:pre-wrap;background:#0e1626;border:1px solid #334155;border-radius:8px;padding:8px 10px;font-size:12px;color:#cbd5e1"></div></div></div>
+  <div class="sign"><div class="st">担当者確認欄（サイン用のみ）</div><div style="font-size:12px;color:#cbd5e1">ご利用ありがとうございます。上記内容に間違いがなければ、ご署名ください。</div>
+    <div class="chk">当日精算分の領収書は<label class="inl"><input type="checkbox">当日お渡し済</label><label class="inl"><input type="checkbox">後日PDF送付</label><label class="inl"><input type="checkbox">希望なし・当日精算なし</label></div>
+    <div style="font-size:11px;color:#94a3b8">署名</div><div class="sign-line"></div></div>
+  <div class="cfg"><h3>◆利用確認書PDF作成</h3>
+    <button class="toolbtn" onclick="makeConfPdf('staff')">スタッフ用作成</button>
+    <button class="toolbtn sec" onclick="makeConfPdf('sign')">サイン用作成</button>
+    <div id="pdfResult" style="font-size:12px;color:#94a3b8;margin-top:8px"></div></div>`;
+  updatePayNote();
+  const ss=document.getElementById('seiyakuSummary');if(ss)ss.textContent=buildOutput();
+  document.querySelectorAll('.std-price').forEach(el=>el.oninput=()=>{std[+el.dataset.idx].price=el.value===''?'':(+el.value||0);refreshMaintFee_();});
+  document.querySelectorAll('.std-qty').forEach(el=>el.oninput=()=>{std[+el.dataset.idx].qty=el.value===''?'':(+el.value||0);refreshMaintFee_();});
+  document.querySelectorAll('.free-name').forEach(el=>el.oninput=()=>{free[+el.dataset.idx].name=el.value;});
+  document.querySelectorAll('.free-price').forEach(el=>el.oninput=()=>{free[+el.dataset.idx].price=el.value===''?'':(+el.value||0);refreshMaintFee_();});
+  document.querySelectorAll('.free-qty').forEach(el=>el.oninput=()=>{free[+el.dataset.idx].qty=el.value===''?'':(+el.value||0);refreshMaintFee_();});
+  document.querySelectorAll('.free-tax').forEach(el=>el.onchange=()=>{free[+el.dataset.idx].taxType=el.value;refreshMaintFee_();});
+  document.querySelectorAll('.free-del').forEach(el=>el.onclick=()=>delFreeFeeRow(+el.dataset.idx));
+}
+function richToolbarHtml(){
+  return '<button type="button" class="toolbtn sec" onmousedown="event.preventDefault()" onclick="document.execCommand(\'bold\')"><b>B</b> 太字</button>'+
+    '<select onchange="if(this.value)applyRichColor_(this.value);this.selectedIndex=0">'+
+    '<option value="">文字色…</option><option value="#111111">黒(既定)</option><option value="#dc2626">赤</option><option value="#2563eb">青</option><option value="#16a34a">緑</option></select>';
+}
+// 数字混じりの選択範囲がブラウザに自動でリンク化(<a>)されてしまい、
+// execCommand('foreColor')が効かないケースがあるため、選択範囲を自前でspan化して文字色を適用する。
+function unwrapAnchors_(node){
+  const anchors=node.querySelectorAll?Array.from(node.querySelectorAll('a')):[];
+  anchors.forEach(a=>{const parent=a.parentNode;while(a.firstChild)parent.insertBefore(a.firstChild,a);parent.removeChild(a);});
+  return node;
+}
+function applyRichColor_(color){
+  const sel=window.getSelection();
+  if(!sel||sel.rangeCount===0||sel.isCollapsed)return;
+  const range=sel.getRangeAt(0);
+  const frag=range.extractContents();
+  unwrapAnchors_(frag);
+  const span=document.createElement('span');
+  span.style.color=color;
+  span.appendChild(frag);
+  range.insertNode(span);
+  sel.removeAllRanges();
+}
+function collectConfPayload_(variant){
+  const b=activeBlock();
+  const imgs=b.layoutImgs||{};const nextOn=!!b.layoutNextEnabled;
+  return {variant:variant,venueName:b.venueName||'',venueAddress:b.venueAddress||'',
+    salesRep:document.getElementById('confSalesRep').value,attendant:document.getElementById('confAttendant').value,
+    company:q('会社名'),client:q('担当者'),site:q('予約サイト'),
+    useDate:q('日付'),useTime:q('時間'),headcount:q('人数'),
+    summaryHtml:document.getElementById('seiyakuSummary').innerHTML,
+    staffShareHtml:document.getElementById('staffShareEdit').innerHTML,
+    standardFees:ensureStandardFees_(b),freeFees:ensureFreeFees_(b),
+    maintenanceFee:computeMaintenanceFee_(b),
+    preConfirmed:document.getElementById('confPreConfirmed').value,
+    prePaid:document.getElementById('confPrePaid').value,
+    balance:document.getElementById('confBalance').value,
+    payDue:document.getElementById('confPayDue').value,
+    layoutDayImg:imgs.day?imgs.day.data:'',layoutNextImg:(nextOn&&imgs.next)?imgs.next.data:'',
+    prePayMethod:document.getElementById('prePay').value,addPayMethod:document.getElementById('addPay').value};
+}
+function makeConfPdf(variant){
+  const d=collectConfPayload_(variant);
+  const box=document.getElementById('pdfResult');
+  if(box)box.textContent='作成中…';
+  google.script.run.withSuccessHandler(function(r){
+      if(box)box.innerHTML='作成しました：<a href="'+r.fileUrl+'" target="_blank" style="color:#60a5fa">'+esc(r.fileName)+'</a>';
+      window.open(r.fileUrl,'_blank');
+    })
+    .withFailureHandler(function(e){ if(box)box.textContent='PDF作成エラー: '+e; })
+    .generateConfirmationPdf(JSON.stringify(d));
+}
+function renderAll(){renderVenueBar();renderHearing();renderLayout();renderConfirmation();}
+// 利用確認書の「利用日」「利用時間」は①ヒアリングシートの値を常に正とする表示専用欄のため、
+// 利用確認書タブを開くたびに最新値へ同期する(成約サマリー等の編集内容は保持したいので
+// renderConfirmation()は呼ばずこの2項目だけ更新する)。
+function syncConfUseDateTime_(){
+  const d=document.getElementById('confUseDate'),t=document.getElementById('confUseTime');
+  if(d)d.value=q('日付')||'';
+  if(t)t.value=q('時間')||'';
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.pane').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.tab).classList.add('active');if(b.dataset.tab==='confirmation')syncConfUseDateTime_();});
+
+function loadAllMasters_(cb){
+  if(!(typeof google!=='undefined'&&google.script&&google.script.run)){cb();return;}
+  let pending=4;
+  const done=()=>{pending--;if(pending<=0)cb();};
+  google.script.run.withSuccessHandler(function(j){try{STANDARD_OPTIONS=JSON.parse(j)||[];}catch(e){STANDARD_OPTIONS=[];}done();})
+    .withFailureHandler(function(err){console.warn('共通オプション取得失敗',err);STANDARD_OPTIONS=[];done();}).apiGetStandardOptions();
+  google.script.run.withSuccessHandler(function(j){try{FAVORITE_VENUES=JSON.parse(j)||[];}catch(e){FAVORITE_VENUES=[];}done();})
+    .withFailureHandler(function(err){console.warn('よく使う会場取得失敗',err);FAVORITE_VENUES=[];done();}).apiGetFavoriteVenues();
+  google.script.run.withSuccessHandler(function(j){try{HEARING=JSON.parse(j)||[];}catch(e){HEARING=[];}done();})
+    .withFailureHandler(function(err){console.warn('ヒアリング項目マスタ取得失敗',err);HEARING=[];done();}).apiGetFormSchema();
+  google.script.run.withSuccessHandler(function(j){try{STAFF_TEMPLATE=(JSON.parse(j)||{}).body||'';}catch(e){STAFF_TEMPLATE='';}done();})
+    .withFailureHandler(function(err){console.warn('共有事項テンプレ取得失敗',err);STAFF_TEMPLATE='';done();}).apiGetStaffTemplate();
+}
+const INITIAL_CASE_ID='<?!= initialCaseId ?>';
+loadAllMasters_(function(){
+  if(INITIAL_CASE_ID){loadCaseById(INITIAL_CASE_ID);}
+  else{renderAll();}
+});
+</script></body></html>

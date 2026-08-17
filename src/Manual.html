@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSCMボード操作マニュアル</title>
+<style>
+:root{
+  --paper:#F6F4EE; --surface:#FFFFFF; --ink:#1C2B33; --ink-soft:#5B6B72;
+  --accent:#2B6777; --accent-strong:#184652; --tint:#E7EEEC; --tint2:#EFEBDF;
+  --line:#DAD5C8; --amber:#A8672B; --amber-tint:#F3E6D4; --caution:#9B3B33; --caution-tint:#F3E1DE;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  --sans: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic Medium", "Noto Sans JP", sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#171B1E; --surface:#1E2428; --ink:#E9E6DD; --ink-soft:#9BA8AC;
+    --accent:#6FB6C4; --accent-strong:#8FD0DC; --tint:#212B2E; --tint2:#232821;
+    --line:#2C3438; --amber:#D79A5C; --amber-tint:#2E2620; --caution:#D48176; --caution-tint:#2E201F;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#171B1E; --surface:#1E2428; --ink:#E9E6DD; --ink-soft:#9BA8AC;
+  --accent:#6FB6C4; --accent-strong:#8FD0DC; --tint:#212B2E; --tint2:#232821;
+  --line:#2C3438; --amber:#D79A5C; --amber-tint:#2E2620; --caution:#D48176; --caution-tint:#2E201F;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.8;-webkit-font-smoothing:antialiased}
+::selection{background:var(--accent);color:var(--surface)}
+a{color:var(--accent-strong)}
+h1,h2,h3{text-wrap:balance;font-weight:800;margin:0;color:var(--ink)}
+p{margin:0 0 .9em}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-strong);font-weight:600}
+.shell{display:flex;max-width:1280px;margin:0 auto}
+.rail{position:sticky;top:0;align-self:flex-start;width:236px;flex:none;height:100vh;overflow-y:auto;padding:34px 14px 34px 28px;border-right:1px solid var(--line);scrollbar-width:thin}
+.rail .mark{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--ink-soft);margin-bottom:22px;display:block}
+.rail nav{display:flex;flex-direction:column;gap:2px}
+.rail a{display:flex;gap:10px;align-items:baseline;text-decoration:none;color:var(--ink-soft);font-size:13px;padding:7px 10px;border-radius:7px;transition:background .15s,color .15s}
+.rail a .num{font-family:var(--mono);font-size:11px;color:var(--ink-soft);flex:none;width:1.6em}
+.rail a:hover{background:var(--tint);color:var(--ink)}
+.rail a.active{background:var(--tint);color:var(--accent-strong);font-weight:700}
+.rail a.active .num{color:var(--accent-strong)}
+.mnav{display:none}
+main{flex:1;min-width:0}
+.slide{padding:64px 56px;border-bottom:1px solid var(--line);scroll-margin-top:20px}
+.slide.tint{background:var(--tint)}
+.slide-head{display:flex;gap:22px;align-items:baseline;margin-bottom:28px}
+.slide-head .num{font-family:var(--mono);font-size:15px;color:var(--accent);font-weight:600;flex:none}
+.slide-head h2{font-size:26px}
+.slide-sub{color:var(--ink-soft);font-size:14px;margin:-18px 0 28px}
+.slide-body{max-width:640px}
+.slide-body.wide{max-width:820px}
+.cover{padding:88px 56px 64px;border-bottom:1px solid var(--line)}
+.cover .eyebrow{margin-bottom:18px}
+.cover h1{font-size:42px;max-width:14em;letter-spacing:-.01em}
+.cover .lede{font-size:16.5px;color:var(--ink-soft);max-width:34em;margin-top:18px}
+.cover .meta{display:flex;gap:28px;flex-wrap:wrap;margin-top:34px;padding-top:22px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft)}
+.cover .meta b{color:var(--ink);font-weight:700;display:block;font-size:13px;margin-bottom:2px}
+.toc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;max-width:820px}
+.toc-card{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;background:var(--surface);border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--ink);transition:border-color .15s,transform .15s}
+.toc-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.toc-card .num{font-family:var(--mono);color:var(--accent);font-weight:700;font-size:14px;flex:none}
+.toc-card .t{font-weight:700;font-size:14.5px}
+.toc-card .d{color:var(--ink-soft);font-size:12.5px;margin-top:2px}
+.quicklinks{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px}
+.qlink{display:flex;flex-direction:column;gap:3px;padding:13px 17px;background:var(--surface);border:1px solid var(--line);border-radius:10px;text-decoration:none;min-width:190px;transition:border-color .15s,transform .15s}
+.qlink:hover{border-color:var(--accent);transform:translateY(-1px)}
+.qlabel{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-strong)}
+.qname{font-size:13.5px;font-weight:700;color:var(--ink)}
+.qnote{font-size:11.5px;color:var(--ink-soft);margin-top:10px}
+.steps{list-style:none;margin:0;padding:0;counter-reset:step;display:flex;flex-direction:column;gap:18px}
+.steps li{counter-increment:step;position:relative;padding-left:40px}
+.steps li::before{content:counter(step);position:absolute;left:0;top:-1px;font-family:var(--mono);font-weight:700;font-size:13px;color:var(--accent-strong);width:28px;height:28px;border:1.5px solid var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.steps b{display:block;font-weight:700;margin-bottom:2px}
+.steps .note{color:var(--ink-soft);font-size:13.5px}
+.callout{display:flex;gap:12px;padding:14px 16px;border-radius:10px;margin:18px 0;font-size:14px}
+.callout .ic{font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.08em;flex:none;padding-top:2px}
+.callout.tip{background:var(--amber-tint);color:var(--ink)} .callout.tip .ic{color:var(--amber)}
+.callout.caution{background:var(--caution-tint);color:var(--ink)} .callout.caution .ic{color:var(--caution)}
+.callout.admin{background:var(--tint2);color:var(--ink);border:1px dashed var(--ink-soft)} .callout.admin .ic{color:var(--ink-soft)}
+.mockrow{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:800;padding:6px 13px;border-radius:20px;font-family:var(--sans);white-space:nowrap}
+.chip.save{background:#16a34a1f;color:#0e6b3a;border:1.5px solid #16a34a}
+.chip.load{background:#7c3aed1f;color:#5b21b6;border:1.5px solid #7c3aed}
+.chip.url{background:#0ea5e91f;color:#075985;border:1.5px solid #0ea5e9}
+.chip.status{background:#64748b1f;color:#334155;border:1.5px solid #64748b}
+.chip.reg{background:#db27771f;color:#9d174d;border:1.5px solid #db2777}
+:root:not([data-theme="light"]) .chip.save,:root[data-theme="dark"] .chip.save{color:#8CE0A8}
+:root:not([data-theme="light"]) .chip.load,:root[data-theme="dark"] .chip.load{color:#CBB4FF}
+:root:not([data-theme="light"]) .chip.url,:root[data-theme="dark"] .chip.url{color:#8FDBFF}
+:root:not([data-theme="light"]) .chip.status,:root[data-theme="dark"] .chip.status{color:#D6DDE3}
+:root:not([data-theme="light"]) .chip.reg,:root[data-theme="dark"] .chip.reg{color:#F4B8D6}
+.mockup-label{font-size:11px;color:var(--ink-soft);margin-bottom:8px;font-family:var(--mono);letter-spacing:.06em;font-weight:600;text-transform:uppercase}
+.tabmock{display:flex;gap:4px;margin:16px 0;border-bottom:1px solid var(--line)}
+.tabmock span{font-size:13px;font-weight:700;padding:8px 14px;color:var(--ink-soft)}
+.tabmock span.on{color:var(--accent-strong);border-bottom:2px solid var(--accent-strong)}
+.example{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-family:var(--mono);font-size:12px;line-height:1.7;white-space:pre-wrap;overflow-x:auto;color:var(--ink-soft);margin:10px 0 18px}
+.example b{color:var(--ink);font-weight:700}
+.field-table{width:100%;border-collapse:collapse;font-size:13.5px;margin:10px 0 20px}
+.field-table th,.field-table td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.field-table th{font-size:11px;color:var(--ink-soft);letter-spacing:.05em;text-transform:uppercase;font-weight:700}
+.field-table td.k{font-weight:700;white-space:nowrap}
+.field-table td.v{color:var(--ink-soft)}
+.flow{display:flex;align-items:stretch;gap:6px;margin:18px 0;flex-wrap:wrap}
+.flow-step{flex:1;min-width:130px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:13px 15px}
+.flow-step .fnum{font-family:var(--mono);font-size:10px;color:var(--accent-strong);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;font-weight:700}
+.flow-step .flabel{font-size:13px;font-weight:700;line-height:1.4}
+.flow-arrow{display:flex;align-items:center;justify-content:center;width:22px;color:var(--ink-soft);font-size:16px;flex:none}
+@media (max-width:700px){.flow{flex-direction:column}.flow-arrow{width:auto;height:18px;transform:rotate(90deg)}}
+.urlbox-mock{display:flex;gap:8px;align-items:center;background:var(--surface);border:1.5px solid var(--accent);border-radius:8px;padding:10px 12px;max-width:460px;margin:16px 0;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.urlbox-mock input{flex:1;border:1px solid var(--line);border-radius:5px;padding:6px 8px;font-size:11.5px;font-family:var(--mono);background:var(--tint);color:var(--ink-soft);min-width:0}
+.urlbox-mock .x{color:var(--ink-soft);font-size:16px;flex:none}
+.appframe{background:#0f172a;border-radius:10px;padding:16px 18px;margin:16px 0;color:#e2e8f0;font-size:12.5px}
+.appframe .cap{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:#64748b;text-transform:uppercase;margin-bottom:10px;font-weight:700}
+.appframe .fr{display:grid;grid-template-columns:132px 1fr;gap:10px;padding:7px 0;border-bottom:1px dashed #1e293b;align-items:center}
+.appframe .fr:last-child{border-bottom:none}
+.appframe .fr .flbl{font-weight:700;color:#e2e8f0}
+.appframe .fr .fval{color:#93c5fd;background:#111827;border:1px solid #334155;border-radius:6px;padding:4px 10px;display:inline-block;font-size:11.5px}
+.appframe .fr.new .fval{color:#fca5a5;border-color:#7f1d1d}
+.appframe .fr.new .flbl{color:#fca5a5}
+.appframe-pair{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.appframe-pair>div{flex:1;min-width:230px}
+.appframe-pair .arrowmid{display:flex;align-items:center;color:var(--ink-soft);font-size:20px;padding-top:40px}
+.sheet-mock{width:100%;border-collapse:collapse;font-size:12px;margin:14px 0;border:1px solid var(--line)}
+.sheet-mock th{background:var(--tint);color:var(--ink);font-weight:700;padding:6px 10px;border:1px solid var(--line);text-align:left;font-size:11px}
+.sheet-mock td{padding:6px 10px;border:1px solid var(--line);color:var(--ink-soft)}
+.sheet-mock tr.new-row td{background:var(--amber-tint);color:var(--ink);font-style:italic}
+.status-legend{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+.status-legend span{font-size:12.5px;font-weight:700;padding:5px 13px;border-radius:20px}
+.cond-table{width:100%;border-collapse:collapse;font-size:13.5px;margin:14px 0}
+.cond-table th,.cond-table td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left}
+.cond-table th{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em}
+.cond-table code{font-family:var(--mono);font-size:12px;background:var(--tint);padding:2px 6px;border-radius:5px;color:var(--accent-strong)}
+.closing{padding:70px 56px 90px;text-align:left}
+.closing h2{font-size:26px;margin-bottom:14px}
+.contact-card{display:flex;gap:22px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px 26px;margin-top:22px;max-width:640px}
+.contact-card div b{display:block;font-size:12px;color:var(--ink-soft);font-weight:700;margin-bottom:4px}
+.contact-card div span{font-size:14px}
+footer.foot{padding:26px 56px 40px;color:var(--ink-soft);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+@media (max-width:900px){
+  .rail{display:none}
+  .mnav{display:flex;overflow-x:auto;gap:4px;position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line);padding:10px 12px;-webkit-overflow-scrolling:touch}
+  .mnav a{flex:none;font-size:12px;font-weight:700;color:var(--ink-soft);text-decoration:none;padding:6px 12px;border-radius:20px;border:1px solid var(--line);font-family:var(--mono)}
+  .mnav a.active{color:var(--accent-strong);border-color:var(--accent-strong);background:var(--tint)}
+  .slide,.cover,.closing{padding:40px 20px}
+  .toc-grid{grid-template-columns:1fr}
+  .cover h1{font-size:30px}
+  footer.foot{padding:20px}
+}
+</style>
+</head>
+<body>
+<div class="mnav" id="mnav"></div>
+<div class="shell">
+  <aside class="rail">
+    <span class="mark">TSCMBOARD / MANUAL</span>
+    <nav id="railnav"></nav>
+  </aside>
+  <main>
+
+    <section class="cover" id="cover">
+      <span class="eyebrow">操作マニュアル</span>
+      <h1>TSCMボード<br>操作方法</h1>
+      <p class="lede">TIMESHARINGシリーズ全会場向けの汎用案件管理ボード。会場はマスタ選択式ではなく自由入力。標準オプション（スペース延長・ゴミ処理・飲み放題・維持管理費）は全会場共通マスタから読込、会場固有のオプションは自由記述で対応します。</p>
+      <div class="meta">
+        <div><b>対象</b>株式会社あどばる タイムシェアリング事業部 営業スタッフ</div>
+        <div><b>対応会場</b>TIMESHARINGシリーズ全会場（会場名は都度自由入力）</div>
+        <div><b>アクセス</b>adval.jpドメイン内の全スタッフ</div>
+      </div>
+      <p class="qnote">※本番URLはデプロイ確定後にここへ追記します。</p>
+    </section>
+
+    <section class="slide" id="toc">
+      <div class="slide-head"><span class="num">目次</span><h2>このマニュアルの内容</h2></div>
+      <div class="toc-grid">
+        <a class="toc-card" href="#basics"><span class="num">00</span><div><div class="t">まず知っておきたい基本操作</div><div class="d">保存・読み込み・削除・ステータス</div></div></a>
+        <a class="toc-card" href="#s1"><span class="num">01</span><div><div class="t">会場の入力とよく使う会場登録</div><div class="d">自由入力＋再利用リスト</div></div></a>
+        <a class="toc-card" href="#s2"><span class="num">02</span><div><div class="t">複数会場・日程の比較検討</div><div class="d">同一案件内での追加・切替</div></div></a>
+        <a class="toc-card" href="#s3"><span class="num">03</span><div><div class="t">標準オプションと自由記述オプション</div><div class="d">維持管理費の自動計算</div></div></a>
+        <a class="toc-card" href="#s4"><span class="num">04</span><div><div class="t">レイアウトの追加方法</div><div class="d">画像アップロードとPDF反映</div></div></a>
+        <a class="toc-card" href="#s5"><span class="num">05</span><div><div class="t">利用確認書とPDF発行</div><div class="d">スタッフ用／サイン用の作り分け</div></div></a>
+        <a class="toc-card" href="#s6"><span class="num">06</span><div><div class="t">テキスト出力・取込</div><div class="d">案件内容の書き出しと反映</div></div></a>
+        <a class="toc-card" href="#s7"><span class="num">07</span><div><div class="t">URL発行と案件の共有</div><div class="d">担当引き継ぎ・複数人確認</div></div></a>
+        <a class="toc-card" href="#s8"><span class="num">08</span><div><div class="t">取り扱い上の注意</div><div class="d">個人情報・共有範囲について</div></div></a>
+        <a class="toc-card" href="#extra"><span class="num">EX</span><div><div class="t">スプレッドシート上での項目追加</div><div class="d">基本は管理者対応・参考情報</div></div></a>
+      </div>
+    </section>
+
+    <section class="slide" id="basics">
+      <div class="slide-head"><span class="num">00</span><h2>まず知っておきたい基本操作</h2></div>
+      <p class="slide-sub">画面右上に常時表示されている3つのボタンです。すべての操作の起点になります。</p>
+      <div class="slide-body wide">
+        <div class="mockup-label">画面右上のヘッダ（実際の表示）</div>
+        <div class="mockrow">
+          <span class="chip status">● ステータス未設定</span>
+          <span class="chip save">💾 保存</span>
+          <span class="chip load">📂 読み込み</span>
+          <span class="chip url">🔗 URL出力</span>
+        </div>
+        <table class="field-table">
+          <tr><th>ボタン</th><th>できること</th></tr>
+          <tr><td class="k">💾 保存</td><td class="v">今開いている案件の入力内容を保存します。初回保存時にID(caseId)が自動発行され、以後は同じボタンで上書き保存になります。</td></tr>
+          <tr><td class="k">📂 読み込み</td><td class="v">保存済みの案件を一覧から呼び出します。会社名・担当者・会場名で検索可能。一覧の🗑ボタンから完全削除もできます。</td></tr>
+          <tr><td class="k">🔗 URL出力</td><td class="v">今の案件専用のURLを発行してクリップボードにコピーします（未保存なら自動保存してから発行）。</td></tr>
+        </table>
+        <div class="mockup-label">ステータスの選択肢（①ヒアリングシート内に「ステータス」項目がある場合に連動）</div>
+        <div class="status-legend">
+          <span style="background:#0ea5e926;color:#0a86bd">問合せ</span>
+          <span style="background:#d9770626;color:#9a5804">仮予約</span>
+          <span style="background:#f43f5e26;color:#c22945">本予約</span>
+          <span style="background:#64748b26;color:#586170">失注</span>
+          <span style="background:#8b5cf626;color:#6f3fd6">見積確定</span>
+        </div>
+        <p class="slide-sub" style="margin:0">ヒアリングシート内の「ステータス」を変更すると、ヘッダのピルも自動で連動して色・文言が切り替わります。</p>
+      </div>
+    </section>
+
+    <section class="slide tint" id="s1">
+      <div class="slide-head"><span class="num">01</span><h2>会場の入力とよく使う会場登録</h2></div>
+      <p class="slide-sub">GPCMボード（グレイドパーク専用）と異なり、TSCMボードは対象会場が非常に多いため、会場名・会場住所は<b style="color:var(--ink)">自由入力</b>です。よく使う会場は登録しておくと、次回から選ぶだけで済みます。</p>
+      <div class="slide-body wide">
+        <div class="mockup-label">画面上部「検討中の会場/日程」バー（実際の表示）</div>
+        <div class="mockrow">
+          <span class="chip reg">会場名：入力欄（よく使う会場から選択も可）</span>
+          <span class="chip reg">会場住所：入力欄</span>
+          <span class="chip reg">＋この会場を登録</span>
+        </div>
+        <ol class="steps">
+          <li><b>会場名を入力する</b><span class="note">「よく使う会場」に登録済みの名前を入力し始めると候補が表示されます（datalist）。候補にない会場名もそのまま自由入力できます。</span></li>
+          <li><b>会場住所を入力する</b><span class="note">候補から会場名を選んだ場合、住所欄が空欄であれば自動で補完されます。手入力で上書きも可能です。</span></li>
+          <li><b>よく登場する会場は「＋この会場を登録」を押す</b><span class="note">確認ダイアログの後、「よく使う会場」スプレッドシートに会場名・住所・登録日時・登録者が記録されます。同名の会場が既にあれば住所が更新されます。</span></li>
+        </ol>
+        <div class="callout tip"><span class="ic">POINT</span><div>会場マスタを事前に用意する必要はありません。案件ごとに自由入力し、よく使う会場だけ登録しておけば、次回以降の入力が楽になります。</div></div>
+        <div class="callout caution"><span class="ic">注意</span><div>会場名・会場住所は自由入力のため、入力内容は画面表示時に必ずエスケープ処理されます（HTMLタグ等を入力しても実行されません）。それでも、実在しない/悪意ある文字列を入力しないようご協力ください。</div></div>
+      </div>
+    </section>
+
+    <section class="slide" id="s2">
+      <div class="slide-head"><span class="num">02</span><h2>複数会場・日程の比較検討</h2></div>
+      <p class="slide-sub">同じ案件の中で、複数の会場・日程を並行して比較検討したい場合に使います。</p>
+      <div class="slide-body wide">
+        <div class="mockup-label">画面上部「検討中の会場/日程」チップ（実際の表示）</div>
+        <div class="mockrow">
+          <span class="chip" style="background:#1d4ed81f;color:#1a3fb8;border:1.5px solid #1d4ed8">会場A（渋谷） ×</span>
+          <span class="chip" style="background:var(--tint);color:var(--ink);border:1.5px solid var(--line)">会場B（新宿） ×</span>
+          <span class="chip" style="background:#0e7a5f1f;color:#0a5e46;border:1.5px solid #0e7a5f">＋ 会場/日程を追加（複数検討）</span>
+        </div>
+        <ol class="steps">
+          <li><b>「＋会場/日程を追加（複数検討）」を押す</b><span class="note">今の内容をそのまま複製した新しいブロックが追加されます。</span></li>
+          <li><b>追加したブロックの会場名・住所を入力し直す</b><span class="note">比較したい会場名を上書き入力するだけです。</span></li>
+          <li><b>チップをクリックして行き来する</b><span class="note">上部に並んだチップをクリックすると、その会場/日程の入力画面に切り替わります。不要になったブロックは×で削除できます。</span></li>
+        </ol>
+        <div class="callout tip"><span class="ic">POINT</span><div>「💾 保存」を押すと、追加したブロックすべてを含めて1つの案件として保存されます。</div></div>
+      </div>
+    </section>
+
+    <section class="slide tint" id="s3">
+      <div class="slide-head"><span class="num">03</span><h2>標準オプションと自由記述オプション</h2></div>
+      <p class="slide-sub">「③ 利用確認書」タブの当日追加料金は、全会場共通の「標準オプション」と、会場ごとに自由入力する「自由記述オプション」の2種類に分かれています。</p>
+      <div class="slide-body wide">
+        <table class="field-table">
+          <tr><th>区分</th><th>内容</th></tr>
+          <tr><td class="k">標準オプション（4項目・全会場共通）</td><td class="v">①スペース延長 ②時間外スペース延長（単価は当日手入力）③ゴミ処理料金（既定¥1,350/袋・税別・編集可）④飲み放題人数追加・延長（既定値あり・税別・編集可）。品目名は編集不可、単価・数量はこの案件限定で編集できます。</td></tr>
+          <tr><td class="k">維持管理費（自動計算）</td><td class="v">標準オプション＋自由記述オプションのうち「税別」表記の行の税抜合計 × 5% を自動計算し、税込表示します。手入力はできません。</td></tr>
+          <tr><td class="k">自由記述オプション</td><td class="v">会場固有のオプション（例：音響オペレーター、駐車場、特別清掃など）は、品目名・単価・数量・税表記（税別/税込）をすべて自由入力できます。行の追加・削除も自由です。</td></tr>
+        </table>
+        <div class="callout tip"><span class="ic">POINT</span><div>標準オプションの単価・税表記の既定値は「共通オプション・料金マスタ」スプレッドシートで管理されています。会場を問わず金額を変更したい場合は、そのマスタのH列（単価）等を編集するだけで、次回以降このボードに反映されます（コード修正・再デプロイ不要）。</div></div>
+        <div class="callout caution"><span class="ic">注意</span><div>維持管理費は「税込」区分の行を対象外として自動計算されます。自由記述オプションの税表記を誤って設定すると、維持管理費の金額もずれるためご注意ください。</div></div>
+      </div>
+    </section>
+
+    <section class="slide" id="s4">
+      <div class="slide-head"><span class="num">04</span><h2>レイアウトの追加方法</h2></div>
+      <p class="slide-sub">「② レイアウト」タブから、当日・翌日それぞれのレイアウト図をアップロードできます（GPCMボードと同じ操作です）。</p>
+      <div class="slide-body wide">
+        <div class="tabmock"><span>① ヒアリングシート</span><span class="on">② レイアウト</span><span>③ 利用確認書</span></div>
+        <ol class="steps">
+          <li><b>「📁 ファイルを選択」から画像を選ぶ</b><span class="note">当日レイアウト・次回レイアウトそれぞれに1枚ずつアップロードできます。</span></li>
+          <li><b>プレビューを確認する</b><span class="note">アップロードした画像はそのブロックに保持され、他のタブへ切り替えても消えません。</span></li>
+          <li><b>「③ 利用確認書」でPDFを作成する</b><span class="note">アップロードした画像が「◆レイアウト図」として、スタッフ用・サイン用どちらのPDFにも自動で反映されます。</span></li>
+        </ol>
+        <div class="callout caution"><span class="ic">注意</span><div>アップロードした画像はデータ量が大きいため、「💾 保存」（案件データベースへの保存）の対象には含まれません。保存済みの案件をURLや読み込みで開き直した場合、画像は再アップロードが必要です。PDF化する直前にアップロードしてください。</div></div>
+      </div>
+    </section>
+
+    <section class="slide tint" id="s5">
+      <div class="slide-head"><span class="num">05</span><h2>利用確認書とPDF発行</h2></div>
+      <p class="slide-sub">「③ 利用確認書」タブの構成とPDF発行の手順です。</p>
+      <div class="slide-body wide">
+        <table class="field-table">
+          <tr><th>入力欄</th><th>内容</th></tr>
+          <tr><td class="k">ヘッダ・ご利用内容</td><td class="v">立会担当・営業担当は入力欄。<b>利用日・利用時間は①ヒアリングシートの内容を自動反映する読み取り専用欄</b>です。</td></tr>
+          <tr><td class="k">ご成約内容サマリー</td><td class="v">「🔄 テキスト出力を反映」で①の内容から自動生成。太字・文字色を選んで編集可能。</td></tr>
+          <tr><td class="k">◆立会スタッフ共有事項</td><td class="v">「共有事項テンプレ」スプレッドシートの内容を初期表示。スタッフ用PDFにのみ反映されます。</td></tr>
+          <tr><td class="k">◆標準オプション／◆その他オプション</td><td class="v">前章の通り。単価・数量を入力すると税抜合計・維持管理費が自動更新されます。</td></tr>
+          <tr><td class="k">◆お支払い状況</td><td class="v">事前確定金額・支払方法など。支払方法を選ぶと、お客様向けの注意文が自動で切り替わります。</td></tr>
+          <tr><td class="k">担当者確認欄</td><td class="v">サイン用PDFにのみ表示される署名欄です。</td></tr>
+        </table>
+        <div class="mockup-label">PDF発行ボタン</div>
+        <div class="mockrow">
+          <span class="chip" style="background:#1d4ed826;color:#1d4ed8;border:1px solid #1d4ed8">スタッフ用作成</span>
+          <span class="chip" style="background:var(--tint2);color:var(--ink);border:1px solid var(--line)">サイン用作成</span>
+        </div>
+        <p style="margin:14px 0 0;color:var(--ink-soft);font-size:13.5px">発行されたPDFはGoogleドライブ「TSCM_共通マスタ」フォルダに保存され、adval.jpドメイン内であれば誰でも開けるリンクが自動で発行されます（フォルダ全体は公開されません）。</p>
+      </div>
+    </section>
+
+    <section class="slide" id="s6">
+      <div class="slide-head"><span class="num">06</span><h2>テキスト出力・取込</h2></div>
+      <p class="slide-sub">①ヒアリングシート下部の「📄 テキスト出力」から、入力済みの全項目をカテゴリごとにまとめて書き出せます。</p>
+      <div class="slide-body wide">
+        <div class="mockup-label">テキスト出力欄のボタン（実際の表示）</div>
+        <div class="mockrow">
+          <span class="chip" style="background:#1d4ed81f;color:#1a3fb8;border:1.5px solid #1d4ed8">📝 テキスト出力を生成</span>
+          <span class="chip" style="background:var(--tint2);color:var(--ink);border:1.5px solid var(--line)">コピー</span>
+        </div>
+        <div class="mockup-label">出力イメージ（タブ区切り・カテゴリ別）</div>
+        <div class="example">会場	グレイドパーク渋谷
+会場住所	東京都渋谷区○○1-2-3
+最終更新	2026/08/17 19:40
+
+①基本内容
+項目	内容	メモ
+会社名	株式会社サンプル
+担当者	山田	</div>
+        <div class="callout tip"><span class="ic">POINT</span><div>「📥 テキスト取込」に、この出力形式（またはそれに準じたタブ区切りテキスト）を貼り付けて「ボードに反映」を押すと、項目名が一致する内容だけが取り込まれます。会場名・会場住所も「会場」「会場住所」の行から反映されます。</div></div>
+        <div class="callout caution"><span class="ic">注意</span><div>プルダウン形式の項目は、今のボードにある選択肢と文字列が完全一致しないと反映されません。GPCMボードのような旧バージョン専用フォーマット（タブ区切り旧ヒアリングボード形式・罫線区切り形式）の取込には対応していません（TSCMボードは新規システムのため対象外）。</div></div>
+      </div>
+    </section>
+
+    <section class="slide tint" id="s7">
+      <div class="slide-head"><span class="num">07</span><h2>URL発行と案件の共有</h2></div>
+      <div class="slide-body wide">
+        <ol class="steps">
+          <li><b>案件を保存する</b><span class="note">まだ保存していない場合は先に「💾 保存」を押します。</span></li>
+          <li><b>「🔗 URL出力」を押す</b><span class="note">画面右にURLが表示され、自動的にクリップボードへコピーされます。</span></li>
+          <li><b>共有する</b><span class="note">チャットやメールに貼り付けて共有します。開いた相手には adval.jp アカウントでのログインが必要です。</span></li>
+        </ol>
+        <div class="mockup-label">URL出力を押すと画面右に表示されるボックス（実際の表示）</div>
+        <div class="urlbox-mock">
+          <input type="text" readonly value=".../exec?case=07f0461a-2c02-4139..." />
+          <span class="x">×</span>
+        </div>
+        <div class="callout tip"><span class="ic">POINT</span><div>「📂 読み込み」からも会社名・担当者・会場名で検索して既存の案件を開けます。また「TSCM_管理システム」スプレッドシートの各行にも、その案件へ直接飛べるURL列が自動で入ります。</div></div>
+      </div>
+    </section>
+
+    <section class="slide" id="s8">
+      <div class="slide-head"><span class="num">08</span><h2>取り扱い上の注意</h2></div>
+      <div class="slide-body wide">
+        <div class="callout caution"><span class="ic">重要</span><div>ボード・案件データともに adval.jp ドメイン内のアカウントに限定されています。個別URLを社外へ転送しないでください。</div></div>
+        <div class="callout caution"><span class="ic">重要</span><div>「📂 読み込み」からは社内の誰でも全案件を閲覧できます。担当引き継ぎを想定した仕様のため、案件データには実際の会社名・担当者名・会場名・住所が含まれます。取り扱いにはご注意ください。</div></div>
+        <div class="callout tip"><span class="ic">POINT</span><div>不要になった案件は「📂 読み込み」一覧の🗑ボタンから完全に削除できます。</div></div>
+      </div>
+    </section>
+
+    <section class="slide" id="extra">
+      <div class="slide-head"><span class="num">EX</span><h2>スプレッドシート上での項目追加方法</h2></div>
+      <p class="slide-sub">通常は管理者（齋藤）が対応しますが、緊急時の参考として記載します。</p>
+      <div class="slide-body wide">
+        <div class="callout admin"><span class="ic">基本方針</span><div>標準オプションの単価・ヒアリング項目・共有事項テンプレは、いずれもスプレッドシート側で管理されており、コードの修正・再デプロイなしにボードへ反映されます。行を追加・編集するだけで完了します。</div></div>
+        <table class="field-table">
+          <tr><th>スプレッドシート</th><th>内容</th></tr>
+          <tr><td class="k">共通オプション・料金マスタ</td><td class="v">標準4項目（スペース延長系/ゴミ処理/飲み放題/維持管理費）の単価・率・税表記。単価列を書き換えるだけで金額を修正できます。</td></tr>
+          <tr><td class="k">よく使う会場</td><td class="v">ボードの「＋この会場を登録」ボタンから自動追記されます。手動で行を追加・削除しても構いません。</td></tr>
+          <tr><td class="k">ヒアリング項目マスタ</td><td class="v">①ヒアリングシートの項目定義（カテゴリ／項目名／種別／選択肢等）。行を追加するだけで新しい項目が全案件で使えるようになります。</td></tr>
+          <tr><td class="k">共有事項テンプレ</td><td class="v">立会スタッフ共有事項の既定文言（2行目のセル1つ）。</td></tr>
+        </table>
+        <div class="mockup-label">ヒアリング項目マスタに1行追加する例（実際のシート表示）</div>
+        <table class="sheet-mock">
+          <tr><th>カテゴリ</th><th>項目名</th><th>種別</th><th>選択肢</th></tr>
+          <tr><td>①基本内容</td><td>会社名</td><td>text</td><td></td></tr>
+          <tr class="new-row"><td>①基本内容</td><td>予約サイト</td><td>select</td><td>直接｜予約サイトA｜予約サイトB（この行を追加）</td></tr>
+        </table>
+        <div class="callout caution"><span class="ic">注意</span><div>会場ごとに項目を切り替える仕組みは廃止されているため、追加した項目はすべての会場・案件で共通に表示されます。会場依存フラグ列は常時FALSEで運用してください。</div></div>
+      </div>
+    </section>
+
+    <section class="closing">
+      <span class="eyebrow">おわりに</span>
+      <h2>困ったときは</h2>
+      <p style="max-width:34em;color:var(--ink-soft)">操作方法が分からない、選択肢が足りない、表示がおかしい——気づいた点はそのまま報告してください。ヒアリング項目・標準オプションの追加・修正も含めて対応します。</p>
+      <div class="contact-card">
+        <div><b>問い合わせ先</b><span>齋藤洸翔（hiroto-saito@adval.jp）</span></div>
+        <div><b>マスタの操作ガイド</b><span>各マスタスプレッドシート・data/README.md参照</span></div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <span>TSCMボード操作マニュアル</span>
+      <span>株式会社あどばる タイムシェアリング事業部</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+(function(){
+  var sections = Array.from(document.querySelectorAll('main section[id]'));
+  var railNav = document.getElementById('railnav');
+  var mnav = document.getElementById('mnav');
+  var groups = {
+    cover:null, toc:null,
+    basics:'基本操作',
+    s1:'01–07 主要機能', s2:'01–07 主要機能', s3:'01–07 主要機能', s4:'01–07 主要機能',
+    s5:'01–07 主要機能', s6:'01–07 主要機能', s7:'01–07 主要機能',
+    s8:'補足', extra:'エクストラ'
+  };
+  var labels = {
+    cover:'表紙', toc:'目次', basics:'基本操作',
+    s1:'会場入力/登録', s2:'複数会場比較', s3:'標準/自由オプション', s4:'レイアウト',
+    s5:'利用確認書', s6:'テキスト出力', s7:'URL発行',
+    s8:'取扱注意', extra:'スプシ操作'
+  };
+  var lastGroup = undefined;
+  sections.forEach(function(sec){
+    var g = groups[sec.id];
+    if(g !== lastGroup && g){
+      var gl = document.createElement('div'); gl.className='group-label'; gl.textContent=g;
+      railNav.appendChild(gl); lastGroup = g;
+    }
+    var a = document.createElement('a');
+    a.href = '#'+sec.id;
+    var numTxt = sec.querySelector('.slide-head .num');
+    a.innerHTML = '<span class="num">'+(numTxt?numTxt.textContent:'-')+'</span><span>'+labels[sec.id]+'</span>';
+    a.dataset.target = sec.id;
+    railNav.appendChild(a);
+
+    var ma = document.createElement('a');
+    ma.href = '#'+sec.id; ma.textContent = labels[sec.id]; ma.dataset.target = sec.id;
+    mnav.appendChild(ma);
+  });
+
+  var railLinks = railNav.querySelectorAll('a');
+  var mLinks = mnav.querySelectorAll('a');
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        var id = e.target.id;
+        railLinks.forEach(function(l){ l.classList.toggle('active', l.dataset.target===id); });
+        mLinks.forEach(function(l){ l.classList.toggle('active', l.dataset.target===id); });
+      }
+    });
+  }, {rootMargin:'-40% 0px -55% 0px'});
+  sections.forEach(function(s){ io.observe(s); });
+})();
+</script>
+
+</body>
+</html>
