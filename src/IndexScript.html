@@ -260,6 +260,13 @@ function renderHearing(){
       <div class="body">${rows}
       <div class="row" style="border:none"><div class="lbl">セクションメモ</div><div class="field"><textarea class="memo" placeholder="このセクション共通の補足メモ…"></textarea></div></div></div></div>`;
   });
+  html+=`<div class="cat"><div class="head" style="background:${catColor(HEARING.length)}" data-toggle>
+    <span>会場固有オプション</span><span class="count" id="hearingFreeCount">（0件）</span><span class="chev">▾</span></div>
+    <div class="body">
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">この会場特有のオプション(設備・サービス等)を品目名で登録し、今回の案件で提供する場合は「あり」にしてください。「あり」の項目だけ③利用確認書に追加され、単価・数量を入力できます。</div>
+      <table class="fee"><thead><tr><th>品目名</th><th style="width:110px">今回</th><th style="width:26px"></th></tr></thead><tbody id="hearingFreeTbody"></tbody></table>
+      <button type="button" class="toolbtn sec" onclick="addFreeFeeRowFromHearing()" style="margin-top:8px">＋ 品目を追加</button>
+    </div></div>`;
   host.innerHTML=html;
   host.querySelectorAll('[data-toggle]').forEach(h=>h.onclick=()=>h.closest('.cat').classList.toggle('collapsed'));
   host.querySelectorAll('select[data-item]').forEach(sel=>{
@@ -272,6 +279,7 @@ function renderHearing(){
   restore(b.snap);
   applyCatering();
   updateStatusPill();
+  renderHearingFreeOptions_();
 }
 const STATUS_COLOR={'問合せ':'#0ea5e9','仮予約':'#d97706','本予約':'#f43f5e','失注':'#64748b','見積確定':'#8b5cf6'};
 function updateStatusPill(){
@@ -413,15 +421,34 @@ function ensureStandardFees_(b){
   return b.standardFees;
 }
 function ensureFreeFees_(b){ if(!b.freeFees)b.freeFees=[]; return b.freeFees; }
+// 既存(この機能追加より前)に保存された自由記述オプションはenabledキーを持たないため、
+// undefinedは「あり」扱いにして後方互換を保つ(明示的にfalseの場合のみ「なし」)。
+const freeFeeOn_=o=>o.enabled!==false;
 function computeMaintenanceFee_(b){
   const std=ensureStandardFees_(b), free=ensureFreeFees_(b);
   let rate=5,subtotal=0;
   std.forEach(o=>{ if(o.code==='MAINT'||o.kind==='percentage'){ if(o.rate)rate=toNum_(o.rate); return; } if(o.taxType==='税込')return; subtotal+=toNum_(o.price)*toNum_(o.qty); });
-  free.forEach(o=>{ if(o.taxType==='税込')return; subtotal+=toNum_(o.price)*toNum_(o.qty); });
+  free.forEach(o=>{ if(!freeFeeOn_(o))return; if(o.taxType==='税込')return; subtotal+=toNum_(o.price)*toNum_(o.qty); });
   return Math.round(subtotal*rate/100);
 }
-function addFreeFeeRow(){ensureFreeFees_(activeBlock()).push({name:'',price:'',qty:'',taxType:'税別'});renderConfirmation();}
-function delFreeFeeRow(idx){ensureFreeFees_(activeBlock()).splice(idx,1);renderConfirmation();}
+function addFreeFeeRow(){ensureFreeFees_(activeBlock()).push({name:'',price:'',qty:'',taxType:'税別',enabled:true});renderConfirmation();}
+function delFreeFeeRow(idx){ensureFreeFees_(activeBlock()).splice(idx,1);renderConfirmation();renderHearingFreeOptions_();}
+// ①ヒアリングシートの「会場固有オプション」欄用: 品目名とあり/なしの登録のみ行い、
+// 単価・数量は③利用確認書側で入力する(あり の項目だけそちらに表示される)。
+function addFreeFeeRowFromHearing(){ensureFreeFees_(activeBlock()).push({name:'',price:'',qty:'',taxType:'税別',enabled:false});renderHearingFreeOptions_();}
+function renderHearingFreeOptions_(){
+  const tbody=document.getElementById('hearingFreeTbody'); if(!tbody)return;
+  const free=ensureFreeFees_(activeBlock());
+  tbody.innerHTML=free.map((o,i)=>`<tr>
+    <td><input type="text" class="hf-name" data-idx="${i}" value="${esc(o.name)}" style="width:100%" placeholder="品目名（例：ムービングライト）"></td>
+    <td style="width:110px"><select class="hf-enabled" data-idx="${i}"><option ${!freeFeeOn_(o)?'selected':''}>なし</option><option ${freeFeeOn_(o)?'selected':''}>あり</option></select></td>
+    <td style="width:26px"><button type="button" class="hf-del" data-idx="${i}" title="この行を削除" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:14px">×</button></td>
+  </tr>`).join('');
+  const cnt=document.getElementById('hearingFreeCount'); if(cnt)cnt.textContent='（'+free.length+'件）';
+  tbody.querySelectorAll('.hf-name').forEach(el=>el.oninput=()=>{free[+el.dataset.idx].name=el.value;});
+  tbody.querySelectorAll('.hf-enabled').forEach(el=>el.onchange=()=>{free[+el.dataset.idx].enabled=(el.value==='あり');renderConfirmation();});
+  tbody.querySelectorAll('.hf-del').forEach(el=>el.onclick=()=>{free.splice(+el.dataset.idx,1);renderHearingFreeOptions_();renderConfirmation();});
+}
 function refreshMaintFee_(){
   const b=activeBlock();
   const std=ensureStandardFees_(b).filter(o=>o.code!=='MAINT'&&o.kind!=='percentage');
@@ -434,7 +461,9 @@ function refreshMaintFee_(){
 function renderConfirmation(){
   const b=activeBlock();
   const std=ensureStandardFees_(b).filter(o=>o.code!=='MAINT'&&o.kind!=='percentage');
-  const free=ensureFreeFees_(b);
+  // 「あり」の項目だけをここに表示する。編集・削除ハンドラは元の配列(freeAll)の実インデックス(_i)を使う。
+  const freeAll=ensureFreeFees_(b);
+  const free=freeAll.map((o,i)=>Object.assign({},o,{_i:i})).filter(freeFeeOn_);
   const taxBadge=t=>`<span class="taxbadge ${t==='税込'?'in':'ex'}">${esc(t||'税別')}</span>`;
   const stdRows=std.map((o,i)=>`<tr>
     <td>${esc(o.name)}${o.unit?'（'+esc(o.unit)+'）':''} ${taxBadge(o.taxType)}</td>
@@ -442,12 +471,12 @@ function renderConfirmation(){
     <td style="width:80px"><input type="number" class="std-qty" data-idx="${i}" value="${o.qty===''||o.qty==null?'':esc(o.qty)}" style="width:100%;text-align:right" placeholder="数量"></td>
     <td style="width:110px;text-align:right;color:#94a3b8">${(o.price!==''&&o.price!=null&&o.qty!==''&&o.qty!=null)?('¥'+(toNum_(o.price)*toNum_(o.qty)).toLocaleString()):''}</td>
   </tr>`).join('');
-  const freeRows=free.map((o,i)=>`<tr>
-    <td><input type="text" class="free-name" data-idx="${i}" value="${esc(o.name)}" style="width:100%" placeholder="品目名（自由入力）"></td>
-    <td style="width:110px"><input type="number" class="free-price" data-idx="${i}" value="${o.price===''||o.price==null?'':esc(o.price)}" style="width:100%;text-align:right" placeholder="単価"></td>
-    <td style="width:80px"><input type="number" class="free-qty" data-idx="${i}" value="${o.qty===''||o.qty==null?'':esc(o.qty)}" style="width:100%;text-align:right" placeholder="数量"></td>
-    <td style="width:78px"><select class="free-tax" data-idx="${i}"><option ${o.taxType!=='税込'?'selected':''}>税別</option><option ${o.taxType==='税込'?'selected':''}>税込</option></select></td>
-    <td style="width:26px"><button type="button" class="free-del" data-idx="${i}" title="この行を削除" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:14px">×</button></td>
+  const freeRows=free.map(o=>`<tr>
+    <td><input type="text" class="free-name" data-idx="${o._i}" value="${esc(o.name)}" style="width:100%" placeholder="品目名（自由入力）"></td>
+    <td style="width:110px"><input type="number" class="free-price" data-idx="${o._i}" value="${o.price===''||o.price==null?'':esc(o.price)}" style="width:100%;text-align:right" placeholder="単価"></td>
+    <td style="width:80px"><input type="number" class="free-qty" data-idx="${o._i}" value="${o.qty===''||o.qty==null?'':esc(o.qty)}" style="width:100%;text-align:right" placeholder="数量"></td>
+    <td style="width:78px"><select class="free-tax" data-idx="${o._i}"><option ${o.taxType!=='税込'?'selected':''}>税別</option><option ${o.taxType==='税込'?'selected':''}>税込</option></select></td>
+    <td style="width:26px"><button type="button" class="free-del" data-idx="${o._i}" title="この行を削除" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:14px">×</button></td>
   </tr>`).join('');
   const maintFee=computeMaintenanceFee_(b);
   document.getElementById('confirmation').innerHTML=`
@@ -466,8 +495,8 @@ function renderConfirmation(){
   <div class="cfg"><h3>◆標準オプション（全会場共通）</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">スペース延長系は単価未確定(当日手入力)。ゴミ処理・飲み放題の単価はこの案件限定で編集できます（共通マスタ本体は変更されません）。数量・税抜合計は当日記入。</div>
     <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税抜合計</th></tr></thead><tbody id="stdFeeTbody">${stdRows||'<tr><td colspan="4" style="text-align:center;color:#64748b">共通オプション・料金マスタが未取得です</td></tr>'}</tbody></table>
     <div style="font-size:11px;color:#93c5fd;margin-top:8px;padding:8px 10px;background:#0e1626;border:1px solid #334155;border-radius:8px">◆維持管理費（税込・自動計算） ＝ 標準+自由記述オプションの税抜合計 × 5% ＝ <b id="maintFeeText" style="color:#fff">¥${maintFee.toLocaleString()}</b></div></div>
-  <div class="cfg"><h3>◆その他オプション（自由記述）</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">会場固有のオプションはこちらに品目名・単価・数量を自由入力してください。</div>
-    <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税表記</th><th></th></tr></thead><tbody id="freeFeeTbody">${freeRows}</tbody></table>
+  <div class="cfg"><h3>◆その他オプション（自由記述）</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">①ヒアリングシートの「会場固有オプション」で「あり」にした項目がここに表示されます。単価・数量はここで入力してください。ここで直接追加した品目は自動的に「あり」扱いになります。</div>
+    <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税表記</th><th></th></tr></thead><tbody id="freeFeeTbody">${freeRows||'<tr><td colspan="5" style="text-align:center;color:#64748b">「あり」の会場固有オプションはありません</td></tr>'}</tbody></table>
     <button type="button" class="toolbtn sec" onclick="addFreeFeeRow()" style="margin-top:8px">＋ 品目を追加</button></div>
   <div class="cfg"><h3>◆お支払い状況</h3><div class="grid2">
     <label class="inl">事前確定金額 <input id="confPreConfirmed" type="text" value=""></label><label class="inl">事前支払額 <input id="confPrePaid" type="text" value=""></label>
@@ -487,10 +516,10 @@ function renderConfirmation(){
   const ss=document.getElementById('seiyakuSummary');if(ss)ss.textContent=buildOutput();
   document.querySelectorAll('.std-price').forEach(el=>el.oninput=()=>{std[+el.dataset.idx].price=el.value===''?'':(+el.value||0);refreshMaintFee_();});
   document.querySelectorAll('.std-qty').forEach(el=>el.oninput=()=>{std[+el.dataset.idx].qty=el.value===''?'':(+el.value||0);refreshMaintFee_();});
-  document.querySelectorAll('.free-name').forEach(el=>el.oninput=()=>{free[+el.dataset.idx].name=el.value;});
-  document.querySelectorAll('.free-price').forEach(el=>el.oninput=()=>{free[+el.dataset.idx].price=el.value===''?'':(+el.value||0);refreshMaintFee_();});
-  document.querySelectorAll('.free-qty').forEach(el=>el.oninput=()=>{free[+el.dataset.idx].qty=el.value===''?'':(+el.value||0);refreshMaintFee_();});
-  document.querySelectorAll('.free-tax').forEach(el=>el.onchange=()=>{free[+el.dataset.idx].taxType=el.value;refreshMaintFee_();});
+  document.querySelectorAll('.free-name').forEach(el=>el.oninput=()=>{freeAll[+el.dataset.idx].name=el.value;});
+  document.querySelectorAll('.free-price').forEach(el=>el.oninput=()=>{freeAll[+el.dataset.idx].price=el.value===''?'':(+el.value||0);refreshMaintFee_();});
+  document.querySelectorAll('.free-qty').forEach(el=>el.oninput=()=>{freeAll[+el.dataset.idx].qty=el.value===''?'':(+el.value||0);refreshMaintFee_();});
+  document.querySelectorAll('.free-tax').forEach(el=>el.onchange=()=>{freeAll[+el.dataset.idx].taxType=el.value;refreshMaintFee_();});
   document.querySelectorAll('.free-del').forEach(el=>el.onclick=()=>delFreeFeeRow(+el.dataset.idx));
 }
 function richToolbarHtml(){
@@ -526,7 +555,7 @@ function collectConfPayload_(variant){
     useDate:q('日付'),useTime:q('時間'),headcount:q('人数'),
     summaryHtml:document.getElementById('seiyakuSummary').innerHTML,
     staffShareHtml:document.getElementById('staffShareEdit').innerHTML,
-    standardFees:ensureStandardFees_(b),freeFees:ensureFreeFees_(b),
+    standardFees:ensureStandardFees_(b),freeFees:ensureFreeFees_(b).filter(freeFeeOn_),
     maintenanceFee:computeMaintenanceFee_(b),
     preConfirmed:document.getElementById('confPreConfirmed').value,
     prePaid:document.getElementById('confPrePaid').value,
