@@ -31,3 +31,16 @@ function doGet(e) {
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
+
+/**
+ * Index.htmlに本体スクリプトをインラインで含めると、初期HTMLがGoogle側の
+ * 配信基盤の埋め込みサイズ上限(実測で約31,000文字)を超えた際に本文が
+ * 無警告のまま途中で切り捨てられる現象を確認した(2026-08-17)。
+ * このため本体スクリプトはIndexScript.html側に分離し、初期HTMLではなく
+ * google.script.run経由(サイズ制限が無いことを確認済みの別経路)で
+ * クライアント側から取得・実行する構成にしている。
+ */
+function apiGetAppScript() {
+  var c = HtmlService.createHtmlOutputFromFile('IndexScript').getContent();
+  return c.replace(/^<script>/, '').replace(/<\/script>\s*$/, '');
+}
