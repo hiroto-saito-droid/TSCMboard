@@ -3,32 +3,26 @@
  * GPCMボードの VenueMaster.gs を土台に、会場マスタ選択式(venueIdキー)を
  * 廃止し、会場自由入力＋全会場共通の標準オプションマスタに再設計したもの。
  *
- * Google Drive側のツール制約で「1ファイルに複数タブ」構成のxlsxアップロード
- * 変換が失敗したため、当初計画の「TSCM_共通マスタ(1ファイル4タブ)」ではなく、
- * 以下4つの独立したGoogleスプレッドシートファイル(各1シート)として作成した。
- *
- *   共通オプション・料金マスタ : OM_STANDARD_ID
- *   よく使う会場               : OM_VENUES_ID
- *   ヒアリング項目マスタ       : OM_FORMSCHEMA_ID
- *   共有事項テンプレ           : OM_STAFF_ID
- *
- * いずれも「1シート目(デフォルトシート名)」にヘッダ行+データを持つため、
- * シート名指定ではなく ss.getSheets()[0] で取得する汎用関数
- * om_readSheetById_(spreadsheetId) を経由して読み込む。
+ * マスタは「TSCM_共通マスタ」という1つのスプレッドシートに、GPCMボードの
+ * 会場マスタと同じ「1ファイル・複数タブ」構成で統合されている
+ * (共通オプション・料金マスタ／よく使う会場／ヒアリング項目マスタ／共有事項テンプレ)。
  ************************************************************/
 
-var OM_STANDARD_ID    = '1zdMfgckhlEOx5qfNsdTxYLOlgOZlV4HrfpMHvUkTkpE'; // 共通オプション・料金マスタ
-var OM_VENUES_ID      = '1FfVjdV4pOuGWbyDHy-wtSlS_Q7E6qm7tn0I4Mwl21iU'; // よく使う会場
-var OM_FORMSCHEMA_ID  = '1tRvTedwSmbr07zdfvog_WxZwGmMXEibe_CljE-PN_D8'; // ヒアリング項目マスタ
-var OM_STAFF_ID       = '1RbM2so7-79D9xZLn9ZeVw_lB3CHhluVkMW7nsOEXeqE'; // 共有事項テンプレ
+var OM_SPREADSHEET_ID = '1g9Nrqdo33DCV0a-RufiQxFteW_y0lw525Tvj2GxlAJ0';
+var OM_TABS = {
+  standard:   '共通オプション・料金マスタ',
+  venues:     'よく使う会場',
+  formSchema: 'ヒアリング項目マスタ',
+  staff:      '共有事項テンプレ'
+};
 
 /**
- * スプレッドシートID一つを引数に取り、1シート目の1行目をヘッダとした
- * オブジェクト配列を返す汎用関数（GPCMのvm_readSheet_相当・複数タブ非依存版）。
+ * タブ名を引数に取り、1行目をヘッダとしたオブジェクト配列を返す汎用関数
+ * （GPCMのvm_readSheet_相当）。
  */
-function om_readSheetById_(spreadsheetId) {
-  var ss = SpreadsheetApp.openById(spreadsheetId);
-  var sh = ss.getSheets()[0];
+function om_readTab_(tabName) {
+  var ss = SpreadsheetApp.openById(OM_SPREADSHEET_ID);
+  var sh = ss.getSheetByName(tabName);
   var values = sh.getDataRange().getValues();
   if (values.length < 2) return [];
   var head = values[0].map(function (h) { return String(h).trim(); });
@@ -66,7 +60,7 @@ function om_activeUserEmail_() {
  *       率(%) / 単位 / 税表記(税別・税込) / 表示順 / 備考
  ************************************************************/
 function getStandardOptions() {
-  var rows = om_readSheetById_(OM_STANDARD_ID);
+  var rows = om_readTab_(OM_TABS.standard);
   var list = rows.map(function (r) {
     return {
       code:    String(r['コード'] || '').trim(),
@@ -90,7 +84,7 @@ function apiGetStandardOptions() { return JSON.stringify(getStandardOptions()); 
  *   列: 会場名 / 会場住所 / 登録日時 / 登録者 / 備考
  ************************************************************/
 function getFavoriteVenues() {
-  var rows = om_readSheetById_(OM_VENUES_ID);
+  var rows = om_readTab_(OM_TABS.venues);
   return rows.map(function (r) {
     return {
       name:         String(r['会場名'] || '').trim(),
@@ -113,8 +107,8 @@ function addFavoriteVenue(name, address) {
   address = String(address || '').trim();
   if (!name) return JSON.stringify({ error: '会場名が空です' });
 
-  var ss = SpreadsheetApp.openById(OM_VENUES_ID);
-  var sh = ss.getSheets()[0];
+  var ss = SpreadsheetApp.openById(OM_SPREADSHEET_ID);
+  var sh = ss.getSheetByName(OM_TABS.venues);
   var lastRow = sh.getLastRow();
   var now = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
   var who = om_activeUserEmail_();
@@ -186,8 +180,8 @@ function om_buildFormSchema_(rows) {
 }
 
 function getFormSchema() {
-  var ss = SpreadsheetApp.openById(OM_FORMSCHEMA_ID);
-  var sh = ss.getSheets()[0];
+  var ss = SpreadsheetApp.openById(OM_SPREADSHEET_ID);
+  var sh = ss.getSheetByName(OM_TABS.formSchema);
   var values = sh.getDataRange().getValues();
   var rows = values.length > 1 ? values.slice(1) : []; // 1行目(見出し)を除く
   return om_buildFormSchema_(rows);
@@ -199,8 +193,8 @@ function apiGetFormSchema() { return JSON.stringify(getFormSchema()); }
  *   列: テンプレ本文（2行目に本文）
  ************************************************************/
 function getStaffTemplate() {
-  var ss = SpreadsheetApp.openById(OM_STAFF_ID);
-  var sh = ss.getSheets()[0];
+  var ss = SpreadsheetApp.openById(OM_SPREADSHEET_ID);
+  var sh = ss.getSheetByName(OM_TABS.staff);
   var lastRow = sh.getLastRow();
   if (lastRow < 2) return '';
   return String(sh.getRange(2, 1, 1, 1).getValue() || '');
