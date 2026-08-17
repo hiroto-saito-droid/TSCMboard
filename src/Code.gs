@@ -33,14 +33,27 @@ function include(filename) {
 }
 
 /**
- * Index.htmlに本体スクリプトをインラインで含めると、初期HTMLがGoogle側の
- * 配信基盤の埋め込みサイズ上限(実測で約31,000文字)を超えた際に本文が
- * 無警告のまま途中で切り捨てられる現象を確認した(2026-08-17)。
- * このため本体スクリプトはIndexScript.html側に分離し、初期HTMLではなく
- * google.script.run経由(サイズ制限が無いことを確認済みの別経路)で
- * クライアント側から取得・実行する構成にしている。
+ * 初期HTMLへの直接埋め込み・google.script.run一括転送のどちらでも、
+ * 本体スクリプトが約3〜4万文字を超えるとブラウザ側で構文的に不完全な
+ * 状態(Uncaught SyntaxError: Unexpected end of input)で受信され、実行に
+ * 失敗する現象を実機のDevToolsコンソールで確認した(2026-08-18)。
+ * 内部の転送経路(userCodeAppPanel)自体にサイズ上限があるとみられるため、
+ * 一括転送をやめ、小さなチャンクに分割してgoogle.script.runで順次取得し、
+ * クライアント側で連結してから実行する方式にしている。
  */
-function apiGetAppScript() {
+var APISCRIPT_CHUNK_SIZE = 8000;
+
+function apiGetAppScript_() {
   var c = HtmlService.createHtmlOutputFromFile('IndexScript').getContent();
   return c.replace(/^<script>/, '').replace(/<\/script>\s*$/, '');
+}
+
+function apiGetAppScriptChunkCount() {
+  return Math.ceil(apiGetAppScript_().length / APISCRIPT_CHUNK_SIZE);
+}
+
+function apiGetAppScriptChunk(index) {
+  var c = apiGetAppScript_();
+  var start = index * APISCRIPT_CHUNK_SIZE;
+  return c.substring(start, start + APISCRIPT_CHUNK_SIZE);
 }

@@ -124,15 +124,28 @@ label.inl{display:flex;gap:6px;align-items:center;font-size:12px;color:#cbd5e1}
 <div class="footer">会場自由入力・標準オプション共通マスタ駆動（ヒアリング項目・標準オプション・共有事項テンプレはスプレッドシートから読込）。データは案件履歴に保存。</div>
 </div>
 <script>
-// 初期HTMLがGoogleの配信基盤の埋め込みサイズ上限を超えると、本文が途中で
-// 無警告のまま切り捨てられる現象を確認したため、本体スクリプトは初期HTMLに
-// 含めず、google.script.run経由(サイズ制限のない別経路)で取得してから実行する。
-google.script.run.withSuccessHandler(function(src){
-  var s=document.createElement('script');
-  s.textContent=src;
-  document.body.appendChild(s);
-}).withFailureHandler(function(err){
-  document.body.insertAdjacentHTML('afterbegin','<div style="background:#dc2626;color:#fff;padding:16px;font-size:14px;position:fixed;top:0;left:0;right:0;z-index:99999">本体スクリプトの読込に失敗しました: '+err+'</div>');
-}).apiGetAppScript();
+// 本体スクリプトを一括転送すると、内部転送経路のサイズ上限により構文的に
+// 不完全な状態で受信され実行に失敗する現象を確認したため(2026-08-18)、
+// 小さなチャンクに分割してgoogle.script.runで順次取得し、連結してから実行する。
+(function(){
+  function showLoadError(err){
+    document.body.insertAdjacentHTML('afterbegin','<div style="background:#dc2626;color:#fff;padding:16px;font-size:14px;position:fixed;top:0;left:0;right:0;z-index:99999">本体スクリプトの読込に失敗しました: '+err+'</div>');
+  }
+  function runScript(parts){
+    var s=document.createElement('script');
+    s.textContent=parts.join('');
+    document.body.appendChild(s);
+  }
+  function fetchChunk(index, total, parts){
+    if (index >= total) { runScript(parts); return; }
+    google.script.run.withSuccessHandler(function(chunk){
+      parts.push(chunk);
+      fetchChunk(index+1, total, parts);
+    }).withFailureHandler(showLoadError).apiGetAppScriptChunk(index);
+  }
+  google.script.run.withSuccessHandler(function(total){
+    fetchChunk(0, total, []);
+  }).withFailureHandler(showLoadError).apiGetAppScriptChunkCount();
+})();
 </script>
 </body></html>
