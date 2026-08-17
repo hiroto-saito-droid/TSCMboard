@@ -362,11 +362,11 @@ function renderLayout(){
   const b=activeBlock();const imgs=b.layoutImgs||{};const memo=b.layoutMemo||{};const nextOn=!!b.layoutNextEnabled;
   document.getElementById('layout').innerHTML=`<div class="banner">レイアウト図（会場：<b>${esc(b.venueName||'(会場未入力)')}</b>）。ファイルから直接アップロード。アップロードした画像は利用確認書PDFにも反映されます。</div>
   <div class="layoutbox"><div style="font-weight:800;color:#fff;margin-bottom:4px">当日レイアウト</div>
-    <div class="uploadbar"><label class="filebtn">📁 ファイルを選択<input type="file" accept="image/*" onchange="previewImg(this,'day')"></label><button class="clearbtn" onclick="clearImg('day')">クリア</button><span id="day-name" style="font-size:11px;color:#94a3b8">${esc(imgs.day?imgs.day.name:'')}</span></div>
+    <div class="uploadbar"><label class="filebtn">📁 ファイルを選択<input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp" onchange="previewImg(this,'day')"></label><button class="clearbtn" onclick="clearImg('day')">クリア</button><span id="day-name" style="font-size:11px;color:#94a3b8">${esc(imgs.day?imgs.day.name:'')}</span></div>
     <div id="day-preview" class="imgslot">${imgs.day?'<img src="'+imgs.day.data+'">':'ファイルを選択してください'}</div>
     <div style="margin-top:10px"><label class="inl" style="margin-bottom:4px">画像メモ</label><textarea placeholder="レイアウト補足…" oninput="setLayoutMemo('day',this.value)">${esc(memo.day||'')}</textarea></div></div>
   <div class="layoutbox"><div style="font-weight:800;color:#fff;margin-bottom:4px">次回レイアウト作成 <select style="margin-left:8px" onchange="setNextLayoutEnabled(this.value)"><option ${!nextOn?'selected':''}>なし</option><option ${nextOn?'selected':''}>あり</option></select></div>
-    <div class="uploadbar"><label class="filebtn">📁 ファイルを選択<input type="file" accept="image/*" onchange="previewImg(this,'next')"></label><button class="clearbtn" onclick="clearImg('next')">クリア</button><span id="next-name" style="font-size:11px;color:#94a3b8">${esc(imgs.next?imgs.next.name:'')}</span></div>
+    <div class="uploadbar"><label class="filebtn">📁 ファイルを選択<input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp" onchange="previewImg(this,'next')"></label><button class="clearbtn" onclick="clearImg('next')">クリア</button><span id="next-name" style="font-size:11px;color:#94a3b8">${esc(imgs.next?imgs.next.name:'')}</span></div>
     <div id="next-preview" class="imgslot">${imgs.next?'<img src="'+imgs.next.data+'">':'ファイルを選択してください'}</div>
     <div style="margin-top:10px"><label class="inl" style="margin-bottom:4px">画像メモ（次回）</label><textarea placeholder="次回レイアウト備考…" oninput="setLayoutMemo('next',this.value)">${esc(memo.next||'')}</textarea></div>
     <div style="font-size:11px;color:#94a3b8;margin-top:6px">「次回レイアウト作成」が「あり」の場合のみ、PDFに反映されます。</div></div>
