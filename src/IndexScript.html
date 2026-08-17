@@ -559,9 +559,8 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.que
 
 function loadAllMasters_(cb){
   const hostEl=document.getElementById('hearing');
-  if(hostEl)hostEl.innerHTML='<div class="banner" id="bootDiag">[診断] スクリプト実行開始 '+new Date().toLocaleTimeString()+' / google.script.run 有無: '+(typeof google!=='undefined'&&!!google.script&&!!google.script.run)+'</div>';
   if(!(typeof google!=='undefined'&&google.script&&google.script.run)){
-    if(hostEl)hostEl.innerHTML+='<div class="banner" style="color:#f87171">[診断] google.script.run が存在しません(iframeの初期化に失敗している可能性)。</div>';
+    if(hostEl)hostEl.innerHTML='<div class="banner" style="color:#f87171">読込に失敗しました。ページを再読み込みしてください。</div>';
     cb();return;
   }
   let pending=4,finished=false;
@@ -582,9 +581,8 @@ function loadAllMasters_(cb){
   google.script.run.withSuccessHandler(function(j){try{STAFF_TEMPLATE=(JSON.parse(j)||{}).body||'';}catch(e){STAFF_TEMPLATE='';}done();})
     .withFailureHandler(function(err){console.warn('共有事項テンプレ取得失敗',err);STAFF_TEMPLATE='';done();}).apiGetStaffTemplate();
 }
-const INITIAL_CASE_ID='<?!= initialCaseId ?>';
 loadAllMasters_(function(){
-  if(INITIAL_CASE_ID){loadCaseById(INITIAL_CASE_ID);}
+  if(window.INITIAL_CASE_ID){loadCaseById(window.INITIAL_CASE_ID);}
   else{renderAll();}
 });
 

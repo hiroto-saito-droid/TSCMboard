@@ -124,6 +124,13 @@ label.inl{display:flex;gap:6px;align-items:center;font-size:12px;color:#cbd5e1}
 <div class="footer">会場自由入力・標準オプション共通マスタ駆動（ヒアリング項目・標準オプション・共有事項テンプレはスプレッドシートから読込）。データは案件履歴に保存。</div>
 </div>
 <script>
+// window.INITIAL_CASE_ID はIndex.html自体がテンプレート評価(createTemplateFromFile
+// 経由)されるためスクリプトレットで埋め込める。本体スクリプト(IndexScript.html)は
+// createHtmlOutputFromFileで配信するためテンプレート評価されず、埋め込んでも文字列
+// のまま残ってしまう(2026-08-18に判明)。そのため値渡しはこちらで行う。
+window.INITIAL_CASE_ID='<?!= initialCaseId ?>';
+</script>
+<script>
 // 本体スクリプトを一括転送すると、内部転送経路のサイズ上限により構文的に
 // 不完全な状態で受信され実行に失敗する現象を確認したため(2026-08-18)、
 // 小さなチャンクに分割してgoogle.script.runで順次取得し、連結してから実行する。
