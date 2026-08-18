@@ -338,6 +338,9 @@ function buildOutput(){
   const nowStr=now.getFullYear()+'/'+pad2(now.getMonth()+1)+'/'+pad2(now.getDate())+' '+pad2(now.getHours())+':'+pad2(now.getMinutes());
   const b=activeBlock();
   const L=[];
+  L.push('顧客管理URL：'+q('顧客管理URL'));
+  L.push('見積書URL：'+qmemo('見積送付'));
+  L.push('');
   L.push('会場\t'+(b.venueName||''));
   L.push('会場住所\t'+(b.venueAddress||''));
   L.push('最終更新\t'+nowStr);
@@ -380,7 +383,7 @@ function payMethodText_(){
 function tmplHoukoku_(){
   const b=activeBlock();
   const dateTime=formatDateJp_(q('日付'))+(q('時間')||'〇〇：〇〇～〇〇：〇〇');
-  return '※成約報告\nお疲れ様です。\n本件、成約となりました。\n\n'
+  return '※成約報告\n\nお疲れ様です。\n本件、成約となりました。\n\n'
     +'〇スペース名：'+(b.venueName||'')+'\n'
     +'〇利用日時：'+dateTime+'\n'
     +'〇スケジュール\n００：００　ケータリング・飲み放題提供開始\n００：００　ケータリング・飲み放題提供終了（LO：００：００）\n'
@@ -401,7 +404,7 @@ function tmplIsshukan_(){
   else if(/Bプラン/.test(drinkType))drinkLines='・飲み放題はＢプランです';
   else drinkLines='・飲み放題は旧プランです（Ｂプランと同じ内容）\n・飲み放題はＡプランです\n・飲み放題はＢプランです';
   const shimbashi=/新橋/.test(b.venueName||'')?'\n\n※新橋のみ\n〇サイネージ表示名：なしor表示名':'';
-  return '※1週間前共有\nお疲れ様です。\n1週間前の確定の共有内容です。\n以下ご確認をお願い致いたします。\n\n'
+  return '※1週間前共有\n\nお疲れ様です。\n1週間前の確定の共有内容です。\n以下ご確認をお願い致いたします。\n\n'
     +'〇スペース名：'+(b.venueName||'')+'\n'
     +'〇利用日時：'+dateTime+'\n'
     +'〇人数　： '+(q('来場人数')||'')+'名\n'
@@ -417,8 +420,18 @@ function tmplIsshukan_(){
     +'〇会場貸出重要事項：'
     +shimbashi;
 }
+// 「〇共有事項」には③利用確認書タブの「◆立会スタッフ共有事項」欄の内容(プレーン
+// テキスト化したもの)をそのまま貼り付ける。太字・文字色付きHTMLで編集されている
+// 場合があるため、innerText優先でタグを落としてから取得する。
+function plainTextFromEl_(id){
+  const el=document.getElementById(id);
+  if(!el)return '';
+  return (el.innerText!==undefined?el.innerText:el.textContent)||'';
+}
 function tmplZenjitsu_(){
-  return '※前日共有\nお疲れ様です。\n明日ご対応いただく案件の前日共有です。\nーーー\n本予約サマリー内容\nーーー\n\n'+buildOutput();
+  return '※前日共有\n\nお疲れ様です。\n明日ご対応いただく案件の前日共有です。\n\n'
+    +buildOutput()
+    +'\n\n〇共有事項\n'+plainTextFromEl_('staffShareEdit');
 }
 function doExportTmpl(kind){
   const fn=kind==='houkoku'?tmplHoukoku_:kind==='isshukan'?tmplIsshukan_:tmplZenjitsu_;
