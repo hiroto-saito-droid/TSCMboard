@@ -187,22 +187,39 @@ function renderVenueBar(){
   const b=activeBlock();
   const chips=state.blocks.map(bl=>`<span class="chip ${bl.id===state.active?'active':''}" onclick="switchBlock(${bl.id})">${esc(bl.venueName||'(会場未入力)')}${state.blocks.length>1?` <button onclick="event.stopPropagation();removeBlock(${bl.id})">×</button>`:''}</span>`).join('');
   const dl=FAVORITE_VENUES.map(v=>`<option value="${esc(v.name)}">`).join('');
+  // 「登録済みの会場からどう選ぶのか分かりにくい」という声を受け、会場名欄への
+  // 入力補完(datalist)に加えて、はっきり見える選択式(select)も併設する。
+  const favOptions=FAVORITE_VENUES.map(v=>`<option value="${esc(v.name)}">${esc(v.name)}</option>`).join('');
   document.getElementById('vbar').innerHTML=`<label>検討中の会場/日程</label>${chips}
     <button class="addbtn" onclick="addBlock()">＋会場/日程を追加（複数検討）</button>
     <span style="margin-left:auto"></span>
     <label>会場名</label><input id="venueNameInput" type="text" list="favoriteVenueList" value="${esc(b.venueName||'')}" placeholder="会場名を入力（自由記述）" style="min-width:200px">
     <datalist id="favoriteVenueList">${dl}</datalist>
+    <select id="favoriteVenueSelect" title="登録済みの会場から選ぶ" style="min-width:170px"><option value="">▼ 登録済み会場から選ぶ（${FAVORITE_VENUES.length}件）</option>${favOptions}</select>
     <label>会場住所</label><input id="venueAddressInput" type="text" value="${esc(b.venueAddress||'')}" placeholder="会場住所（自由記述）" style="min-width:220px">
     <button class="addbtn" style="background:#7c3aed" onclick="registerFavoriteVenue()">＋この会場を登録</button>`;
   const vn=document.getElementById('venueNameInput');
   const va=document.getElementById('venueAddressInput');
-  vn.oninput=()=>{activeBlock().venueName=vn.value;};
+  const fvs=document.getElementById('favoriteVenueSelect');
+  const applyVenuePick_=name=>{
+    vn.value=name;activeBlock().venueName=name;
+    const hit=FAVORITE_VENUES.find(v=>v.name===name);
+    if(hit&&!va.value.trim()){va.value=hit.address;activeBlock().venueAddress=hit.address;}
+    syncMetaVenueLine_();
+  };
+  vn.oninput=()=>{activeBlock().venueName=vn.value;syncMetaVenueLine_();};
   vn.onchange=()=>{
     // datalist(よく使う会場)から選択された場合、住所が未入力なら自動補完する
     const hit=FAVORITE_VENUES.find(v=>v.name===vn.value);
     if(hit&&!va.value.trim()){va.value=hit.address;activeBlock().venueAddress=hit.address;}
   };
+  fvs.onchange=()=>{if(fvs.value){applyVenuePick_(fvs.value);fvs.value='';}};
   va.oninput=()=>{activeBlock().venueAddress=va.value;};
+}
+// ①ヒアリングシート「META」区分内に会場名を表示する行があれば、最新の会場名に同期する。
+function syncMetaVenueLine_(){
+  const el=document.getElementById('metaVenueLine');
+  if(el)el.textContent=activeBlock().venueName||'(会場未入力)';
 }
 function registerFavoriteVenue(){
   const name=(document.getElementById('venueNameInput').value||'').trim();
@@ -231,9 +248,6 @@ function renderHearing(){
   const host=document.getElementById('hearing');
   const b=activeBlock();
   let html=`<div class="tools">
-    <details><summary>📥 テキスト取込（「テキスト出力」の内容をそのまま貼り付けて「ボードに反映」も可）</summary>
-      <textarea id="importText" placeholder="「テキスト出力」で生成した内容をそのまま貼り付けられます。"></textarea>
-      <div><button class="toolbtn" onclick="doImport()">ボードに反映</button></div></details>
     <details open><summary>📄 テキスト出力</summary>
       <div><button class="toolbtn" onclick="doExport()">📝 テキスト出力を生成</button><button class="toolbtn sec" onclick="copyOut()">コピー</button></div>
       <textarea id="outText" readonly placeholder="「テキスト出力を生成」を押すと表示されます"></textarea></details></div>
@@ -255,9 +269,13 @@ function renderHearing(){
         <div class="field"><div class="ctl">${ctl(it)}</div>
         <input class="memo" type="text" value="${esc(memo)}" placeholder="備考メモ (任意)"></div></div>`;
     }).join('');
+    // METAカテゴリ(顧客情報)には、上部の会場バーで入力した会場名を常に表示し、
+    // どの案件の顧客情報かを一目で分かるようにする(vbarのinputと連動、syncMetaVenueLine_参照)。
+    const metaVenueRow=(sec.cat==='META')?`<div class="row" style="border-bottom:1.5px solid #334155"><div class="lbl">会場（①上部の会場バーから入力）</div>
+      <div class="field"><div class="ctl" style="font-weight:800;color:#fff" id="metaVenueLine">${esc(b.venueName||'(会場未入力)')}</div></div></div>`:'';
     html+=`<div class="cat"><div class="head" style="background:${catColor(secIdx)}" data-toggle>
       <span>${esc(sec.cat)}</span><span class="count">（${sec.items.length}項目）</span><span class="chev">▾</span></div>
-      <div class="body">${rows}
+      <div class="body">${metaVenueRow}${rows}
       <div class="row" style="border:none"><div class="lbl">セクションメモ</div><div class="field"><textarea class="memo" placeholder="このセクション共通の補足メモ…"></textarea></div></div></div></div>`;
   });
   html+=`<div class="cat"><div class="head" style="background:${catColor(HEARING.length)}" data-toggle>
@@ -326,33 +344,18 @@ function buildOutput(){
     });
     L.push('');
   });
+  // 会場固有オプション(①ヒアリングシートで「あり」にしたもの)も成約内容サマリーに反映する。
+  const freeOn=ensureFreeFees_(b).filter(freeFeeOn_);
+  if(freeOn.length){
+    L.push('会場固有オプション');
+    L.push('品目\t内容\tメモ');
+    freeOn.forEach(o=>{ L.push((o.name||'(品目名未入力)')+'\tあり\t'); });
+    L.push('');
+  }
   return L.join('\n');
 }
 function doExport(){document.getElementById('outText').value=buildOutput();}
 function copyOut(){const t=document.getElementById('outText');t.select();try{document.execCommand('copy');}catch(e){}}
-function doImport(){
-  const txt=document.getElementById('importText').value;
-  const lines=txt.split(/\r?\n/);
-  let n=0;
-  lines.forEach(line=>{
-    if(!line||line.indexOf('\t')<0)return;
-    const parts=line.split('\t');
-    const item=(parts[0]||'').trim();
-    const val=(parts[1]!==undefined)?parts[1]:'';
-    const memo=(parts[2]!==undefined)?parts[2]:'';
-    if(!item||item==='項目'||item==='最終更新')return;
-    if(item==='会場'){const el=document.getElementById('venueNameInput');if(el){el.value=val;activeBlock().venueName=val;}return;}
-    if(item==='会場住所'){const el=document.getElementById('venueAddressInput');if(el){el.value=val;activeBlock().venueAddress=val;}return;}
-    const el=getEl(item);
-    if(!el)return;
-    if(el.tagName==='SELECT'&&![...el.options].some(o=>o.value===val))return;
-    writeCtl(el,val);n++;
-    if(memo){const fl=el.closest('.field');const mm=fl?fl.querySelector('.memo'):null;if(mm)mm.value=memo;}
-  });
-  applyCatering();
-  updateStatusPill();
-  alert(n+'件を反映しました');
-}
 function previewImg(input,key){
   const f=input.files&&input.files[0];const box=document.getElementById(key+'-preview');const nm=document.getElementById(key+'-name');if(!f)return;
   const rd=new FileReader();rd.onload=e=>{

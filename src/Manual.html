@@ -177,10 +177,10 @@ footer.foot{padding:26px 56px 40px;color:var(--ink-soft);font-size:12px;display:
         <a class="toc-card" href="#basics"><span class="num">00</span><div><div class="t">まず知っておきたい基本操作</div><div class="d">保存・読み込み・削除・ステータス</div></div></a>
         <a class="toc-card" href="#s1"><span class="num">01</span><div><div class="t">会場の入力とよく使う会場登録</div><div class="d">自由入力＋再利用リスト</div></div></a>
         <a class="toc-card" href="#s2"><span class="num">02</span><div><div class="t">複数会場・日程の比較検討</div><div class="d">同一案件内での追加・切替</div></div></a>
-        <a class="toc-card" href="#s3"><span class="num">03</span><div><div class="t">標準オプションと自由記述オプション</div><div class="d">維持管理費の自動計算</div></div></a>
+        <a class="toc-card" href="#s3"><span class="num">03</span><div><div class="t">標準オプションと会場固有オプション（あり/なし）</div><div class="d">維持管理費の自動計算</div></div></a>
         <a class="toc-card" href="#s4"><span class="num">04</span><div><div class="t">レイアウトの追加方法</div><div class="d">画像アップロードとPDF反映</div></div></a>
         <a class="toc-card" href="#s5"><span class="num">05</span><div><div class="t">利用確認書とPDF発行</div><div class="d">スタッフ用／サイン用の作り分け</div></div></a>
-        <a class="toc-card" href="#s6"><span class="num">06</span><div><div class="t">テキスト出力・取込</div><div class="d">案件内容の書き出しと反映</div></div></a>
+        <a class="toc-card" href="#s6"><span class="num">06</span><div><div class="t">テキスト出力</div><div class="d">案件内容の書き出し（控え用）</div></div></a>
         <a class="toc-card" href="#s7"><span class="num">07</span><div><div class="t">URL発行と案件の共有</div><div class="d">担当引き継ぎ・複数人確認</div></div></a>
         <a class="toc-card" href="#s8"><span class="num">08</span><div><div class="t">取り扱い上の注意</div><div class="d">個人情報・共有範囲について</div></div></a>
         <a class="toc-card" href="#extra"><span class="num">EX</span><div><div class="t">スプレッドシート上での項目追加</div><div class="d">基本は管理者対応・参考情報</div></div></a>
@@ -213,6 +213,7 @@ footer.foot{padding:26px 56px 40px;color:var(--ink-soft);font-size:12px;display:
           <span style="background:#8b5cf626;color:#6f3fd6">見積確定</span>
         </div>
         <p class="slide-sub" style="margin:0">ヒアリングシート内の「ステータス」を変更すると、ヘッダのピルも自動で連動して色・文言が切り替わります。</p>
+        <div class="callout tip" style="margin-top:18px"><span class="ic">POINT</span><div>①ヒアリングシートの先頭には「META」区分があり、<b style="color:var(--ink)">会社名・担当者・予約サイト・営業担当</b>（顧客情報）を入力します。META区分には、上部の会場バーで入力した<b style="color:var(--ink)">会場名も自動で表示</b>され、常にどの案件の顧客情報かが分かるようになっています。</div></div>
       </div>
     </section>
 
@@ -222,14 +223,16 @@ footer.foot{padding:26px 56px 40px;color:var(--ink-soft);font-size:12px;display:
       <div class="slide-body wide">
         <div class="mockup-label">画面上部「検討中の会場/日程」バー（実際の表示）</div>
         <div class="mockrow">
-          <span class="chip reg">会場名：入力欄（よく使う会場から選択も可）</span>
+          <span class="chip reg">会場名：入力欄</span>
+          <span class="chip reg">▼ 登録済み会場から選ぶ</span>
           <span class="chip reg">会場住所：入力欄</span>
           <span class="chip reg">＋この会場を登録</span>
         </div>
         <ol class="steps">
-          <li><b>会場名を入力する</b><span class="note">「よく使う会場」に登録済みの名前を入力し始めると候補が表示されます（datalist）。候補にない会場名もそのまま自由入力できます。</span></li>
-          <li><b>会場住所を入力する</b><span class="note">候補から会場名を選んだ場合、住所欄が空欄であれば自動で補完されます。手入力で上書きも可能です。</span></li>
-          <li><b>よく登場する会場は「＋この会場を登録」を押す</b><span class="note">確認ダイアログの後、「よく使う会場」スプレッドシートに会場名・住所・登録日時・登録者が記録されます。同名の会場が既にあれば住所が更新されます。</span></li>
+          <li><b>登録済みの会場は「▼ 登録済み会場から選ぶ」で選ぶ</b><span class="note">会場名欄のすぐ右にある選択式(プルダウン)です。選ぶと会場名・（住所が未入力なら）住所も自動で入ります。</span></li>
+          <li><b>候補にない会場は会場名欄に直接入力する</b><span class="note">入力し始めると同じ候補が入力補完（datalist）としても表示されます。候補にない会場名もそのまま自由入力できます。</span></li>
+          <li><b>会場住所を入力する</b><span class="note">プルダウン・候補から会場名を選んだ場合、住所欄が空欄であれば自動で補完されます。手入力で上書きも可能です。</span></li>
+          <li><b>よく登場する会場は「＋この会場を登録」を押す</b><span class="note">確認ダイアログの後、「よく使う会場」スプレッドシートに会場名・住所・登録日時・登録者が記録されます。同名の会場が既にあれば住所が更新されます。次回から「▼ 登録済み会場から選ぶ」に表示されます。</span></li>
         </ol>
         <div class="callout tip"><span class="ic">POINT</span><div>会場マスタを事前に用意する必要はありません。案件ごとに自由入力し、よく使う会場だけ登録しておけば、次回以降の入力が楽になります。</div></div>
         <div class="callout caution"><span class="ic">注意</span><div>会場名・会場住所は自由入力のため、入力内容は画面表示時に必ずエスケープ処理されます（HTMLタグ等を入力しても実行されません）。それでも、実在しない/悪意ある文字列を入力しないようご協力ください。</div></div>
@@ -256,17 +259,19 @@ footer.foot{padding:26px 56px 40px;color:var(--ink-soft);font-size:12px;display:
     </section>
 
     <section class="slide tint" id="s3">
-      <div class="slide-head"><span class="num">03</span><h2>標準オプションと自由記述オプション</h2></div>
-      <p class="slide-sub">「③ 利用確認書」タブの当日追加料金は、全会場共通の「標準オプション」と、会場ごとに自由入力する「自由記述オプション」の2種類に分かれています。</p>
+      <div class="slide-head"><span class="num">03</span><h2>標準オプションと会場固有オプション（あり/なし）</h2></div>
+      <p class="slide-sub">当日追加料金は、全会場共通の「標準オプション」と、会場ごとに自由入力する「会場固有オプション」の2種類に分かれています。会場固有オプションは①で登録・あり/なし切替、③で金額入力という2段階の流れです。</p>
       <div class="slide-body wide">
         <table class="field-table">
           <tr><th>区分</th><th>内容</th></tr>
-          <tr><td class="k">標準オプション（4項目・全会場共通）</td><td class="v">①スペース延長 ②時間外スペース延長（単価は当日手入力）③ゴミ処理料金（既定¥1,350/袋・税別・編集可）④飲み放題人数追加・延長（既定値あり・税別・編集可）。品目名は編集不可、単価・数量はこの案件限定で編集できます。</td></tr>
-          <tr><td class="k">維持管理費（自動計算）</td><td class="v">標準オプション＋自由記述オプションのうち「税別」表記の行の税抜合計 × 5% を自動計算し、税込表示します。手入力はできません。</td></tr>
-          <tr><td class="k">自由記述オプション</td><td class="v">会場固有のオプション（例：音響オペレーター、駐車場、特別清掃など）は、品目名・単価・数量・税表記（税別/税込）をすべて自由入力できます。行の追加・削除も自由です。</td></tr>
+          <tr><td class="k">標準オプション（4項目・全会場共通）</td><td class="v">①スペース延長 ②時間外スペース延長（単価は当日手入力）③ゴミ処理料金（既定¥1,350/袋・税別・編集可）④飲み放題人数追加・延長（既定値あり・税別・編集可）。品目名は編集不可、単価・数量は③利用確認書タブでこの案件限定で編集できます。</td></tr>
+          <tr><td class="k">①ヒアリングシート「会場固有オプション」</td><td class="v">会場固有のオプション（例：音響オペレーター、駐車場、特別清掃、プロジェクター持込料など）を品目名で登録し、「あり／なし」を選びます。「あり」にした項目だけが③利用確認書に表示されます。</td></tr>
+          <tr><td class="k">③利用確認書「その他オプション（自由記述）」</td><td class="v">①で「あり」にした品目の単価・数量・税表記（税別/税込）をここで入力します。ここで直接「＋品目を追加」した品目は自動的に「あり」扱いになります。</td></tr>
+          <tr><td class="k">維持管理費（自動計算）</td><td class="v">標準オプション＋会場固有オプション（「あり」のもののみ）のうち「税別」表記の行の税抜合計 × 5% を自動計算し、税込表示します。手入力はできません。</td></tr>
         </table>
-        <div class="callout tip"><span class="ic">POINT</span><div>標準オプションの単価・税表記の既定値は「共通オプション・料金マスタ」スプレッドシートで管理されています。会場を問わず金額を変更したい場合は、そのマスタのH列（単価）等を編集するだけで、次回以降このボードに反映されます（コード修正・再デプロイ不要）。</div></div>
-        <div class="callout caution"><span class="ic">注意</span><div>維持管理費は「税込」区分の行を対象外として自動計算されます。自由記述オプションの税表記を誤って設定すると、維持管理費の金額もずれるためご注意ください。</div></div>
+        <div class="callout tip"><span class="ic">POINT</span><div>標準オプションの単価・税表記の既定値は「共通オプション・料金マスタ」スプレッドシートで管理されています。会場を問わず金額を変更したい場合は、そのマスタの単価列等を編集するだけで、次回以降このボードに反映されます（コード修正・再デプロイ不要）。</div></div>
+        <div class="callout tip"><span class="ic">POINT</span><div>①ヒアリングシートには「設備」区分（プロジェクター・スクリーン・マイクの有無/種類）と、ケータリング区分で「自社発注」「外部発注」を選んだ際に表示される「食事プラン」「ドリンクタイプ」も用意されています。</div></div>
+        <div class="callout caution"><span class="ic">注意</span><div>維持管理費は「税込」区分の行を対象外として自動計算されます。会場固有オプションの税表記を誤って設定すると、維持管理費の金額もずれるためご注意ください。「なし」にした（または削除した）項目は維持管理費の計算にも含まれません。</div></div>
       </div>
     </section>
 
@@ -291,9 +296,9 @@ footer.foot{padding:26px 56px 40px;color:var(--ink-soft);font-size:12px;display:
         <table class="field-table">
           <tr><th>入力欄</th><th>内容</th></tr>
           <tr><td class="k">ヘッダ・ご利用内容</td><td class="v">立会担当・営業担当は入力欄。<b>利用日・利用時間は①ヒアリングシートの内容を自動反映する読み取り専用欄</b>です。</td></tr>
-          <tr><td class="k">ご成約内容サマリー</td><td class="v">「🔄 テキスト出力を反映」で①の内容から自動生成。太字・文字色を選んで編集可能。</td></tr>
+          <tr><td class="k">ご成約内容サマリー</td><td class="v">「🔄 テキスト出力を反映」で①の内容から自動生成（①で「あり」にした会場固有オプションも含まれます）。太字・文字色を選んで編集可能。</td></tr>
           <tr><td class="k">◆立会スタッフ共有事項</td><td class="v">「共有事項テンプレ」スプレッドシートの内容を初期表示。スタッフ用PDFにのみ反映されます。</td></tr>
-          <tr><td class="k">◆標準オプション／◆その他オプション</td><td class="v">前章の通り。単価・数量を入力すると税抜合計・維持管理費が自動更新されます。</td></tr>
+          <tr><td class="k">◆標準オプション／◆その他オプション（自由記述）</td><td class="v">前章の通り。①で「あり」にした会場固有オプションだけがここに表示されます。単価・数量を入力すると税抜合計・維持管理費が自動更新されます。</td></tr>
           <tr><td class="k">◆お支払い状況</td><td class="v">事前確定金額・支払方法など。支払方法を選ぶと、お客様向けの注意文が自動で切り替わります。</td></tr>
           <tr><td class="k">担当者確認欄</td><td class="v">サイン用PDFにのみ表示される署名欄です。</td></tr>
         </table>
@@ -307,8 +312,8 @@ footer.foot{padding:26px 56px 40px;color:var(--ink-soft);font-size:12px;display:
     </section>
 
     <section class="slide" id="s6">
-      <div class="slide-head"><span class="num">06</span><h2>テキスト出力・取込</h2></div>
-      <p class="slide-sub">①ヒアリングシート下部の「📄 テキスト出力」から、入力済みの全項目をカテゴリごとにまとめて書き出せます。</p>
+      <div class="slide-head"><span class="num">06</span><h2>テキスト出力</h2></div>
+      <p class="slide-sub">①ヒアリングシート下部の「📄 テキスト出力」から、入力済みの全項目をカテゴリごとにまとめて書き出せます。共有・引き継ぎ用の控えとして使えます。</p>
       <div class="slide-body wide">
         <div class="mockup-label">テキスト出力欄のボタン（実際の表示）</div>
         <div class="mockrow">
@@ -320,12 +325,12 @@ footer.foot{padding:26px 56px 40px;color:var(--ink-soft);font-size:12px;display:
 会場住所	東京都渋谷区○○1-2-3
 最終更新	2026/08/17 19:40
 
-①基本内容
+META
 項目	内容	メモ
 会社名	株式会社サンプル
 担当者	山田	</div>
-        <div class="callout tip"><span class="ic">POINT</span><div>「📥 テキスト取込」に、この出力形式（またはそれに準じたタブ区切りテキスト）を貼り付けて「ボードに反映」を押すと、項目名が一致する内容だけが取り込まれます。会場名・会場住所も「会場」「会場住所」の行から反映されます。</div></div>
-        <div class="callout caution"><span class="ic">注意</span><div>プルダウン形式の項目は、今のボードにある選択肢と文字列が完全一致しないと反映されません。GPCMボードのような旧バージョン専用フォーマット（タブ区切り旧ヒアリングボード形式・罫線区切り形式）の取込には対応していません（TSCMボードは新規システムのため対象外）。</div></div>
+        <div class="callout tip"><span class="ic">POINT</span><div>①で「あり」にした会場固有オプションも、出力の末尾に「会場固有オプション」の区分としてまとめて含まれます。</div></div>
+        <div class="callout caution"><span class="ic">注意</span><div>この出力は貼り付け用の控えです（旧バージョンのようなボードへの取込機能はありません）。「コピー」ボタンでクリップボードにコピーできます。</div></div>
       </div>
     </section>
 
