@@ -263,7 +263,7 @@ function renderConfirmationHtml_(variant, d, venue) {
     '<div class="paynote">■ お支払いに関するご案内\n' + ce_(payNote) + '</div>' +
     '<div class="sec">◆領収書</div><table>' +
       '<tr><th class="k">宛名</th><td>' + ce_(d.receiptName || '') + '</td><th class="k">送付先</th><td>' + ce_(d.receiptAddress || '') + '</td></tr></table>' +
-    '<div class="paynote">恐れ入りますが、領収書の宛名を「上様」とすることはご遠慮いただいております。また、発行後の領収書を分割してのご発行も承っておりませんので、あらかじめご了承いただけますようお願いいたします。</div>' +
+    '<div class="paynote">※恐れ入りますが、領収書の宛名を「上様」とすることはご遠慮いただいております。\n※発行後の領収書を分割してのご発行も承っておりませんので、あらかじめご了承ください。</div>' +
     signBlock +
     '<div class="foot">本書はTSCM管理ボードの入力内容をもとに自動生成されました（' +
       (isStaff ? 'スタッフ用・社内' : 'サイン用・お客様控') + '）。<br>' + ce_(venueName) +
