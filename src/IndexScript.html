@@ -581,7 +581,7 @@ function renderConfirmation(){
   document.getElementById('confirmation').innerHTML=`
   <div class="banner">利用確認書（会場：<b>${esc(b.venueName||'(会場未入力)')}</b>${b.venueAddress?'　'+esc(b.venueAddress):''}）。</div>
   <div class="cfg"><h3>ヘッダ・ご利用内容</h3><div class="grid2">
-    <label class="inl">立会担当 <input id="confAttendant" type="text" value="${esc(cf.attendant)}"></label><label class="inl">営業担当（①ヒアリングシートから自動反映） <input id="confSalesRep" type="text" value="${esc(q('営業担当')||'')}" readonly style="background:#0e1626;color:#94a3b8;cursor:not-allowed"></label>
+    <label class="inl">立会担当 <input id="confAttendant" type="text" value="${esc(cf.attendant)}" style="flex:1;min-width:200px"></label><label class="inl">営業担当（①ヒアリングシートから自動反映） <input id="confSalesRep" type="text" value="${esc(q('営業担当')||'')}" readonly style="flex:1;min-width:200px;background:#0e1626;color:#94a3b8;cursor:not-allowed"></label>
     <label class="inl">利用日（①ヒアリングシートから自動反映） <input id="confUseDate" type="text" value="${esc(q('日付')||'')}" readonly style="background:#0e1626;color:#94a3b8;cursor:not-allowed"></label><label class="inl">利用時間（①ヒアリングシートから自動反映） <input id="confUseTime" type="text" value="${esc(q('時間')||'')}" readonly style="background:#0e1626;color:#94a3b8;cursor:not-allowed"></label></div></div>
   <div class="cfg"><h3>ご成約内容サマリー（テキスト出力を反映・編集可／太字・文字色を選択して変更可）</h3>
     <div class="richbar">${richToolbarHtml()}
@@ -605,8 +605,8 @@ function renderConfirmation(){
     <div style="margin-top:10px"><div style="font-size:11px;font-weight:700;color:#93c5fd;margin-bottom:4px">お支払いに関するご案内（支払方法により自動切替）</div>
     <div id="payNote" style="white-space:pre-wrap;background:#0e1626;border:1px solid #334155;border-radius:8px;padding:8px 10px;font-size:12px;color:#cbd5e1"></div></div></div>
   <div class="cfg"><h3>◆領収書</h3><div class="grid2">
-    <label class="inl">宛名 <input id="confReceiptName" type="text" value="${esc(cf.receiptName)}" placeholder="株式会社〇〇 御中 など"></label>
-    <label class="inl">送付先 <input id="confReceiptAddress" type="text" value="${esc(cf.receiptAddress)}" placeholder="郵送が必要な場合のみ入力"></label></div>
+    <label class="inl">宛名 <input id="confReceiptName" type="text" value="${esc(cf.receiptName)}" placeholder="株式会社〇〇 御中 など" style="flex:1;min-width:260px"></label>
+    <label class="inl">送付先 <input id="confReceiptAddress" type="text" value="${esc(cf.receiptAddress)}" placeholder="郵送が必要な場合のみ入力" style="flex:1;min-width:260px"></label></div>
     <div style="font-size:11px;color:#f0b866;margin-top:8px;padding:8px 10px;background:#1a140b;border:1px solid #7a5a1e;border-radius:8px">※恐れ入りますが、領収書の宛名を「上様」とすることはご遠慮いただいております。<br>※発行後の領収書を分割してのご発行も承っておりませんので、あらかじめご了承ください。</div></div>
   <div class="sign"><div class="st">担当者確認欄（サイン用のみ）</div><div style="font-size:12px;color:#cbd5e1">ご利用ありがとうございます。上記内容に間違いがなければ、ご署名ください。</div>
     <div class="chk">当日精算分の領収書は<label class="inl"><input type="checkbox">当日お渡し済</label><label class="inl"><input type="checkbox">後日PDF送付</label><label class="inl"><input type="checkbox">希望なし・当日精算なし</label></div>
