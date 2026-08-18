@@ -291,9 +291,10 @@ footer.foot{padding:26px 56px 40px;color:var(--ink-soft);font-size:12px;display:
         <ol class="steps">
           <li><b>「📁 ファイルを選択」から画像を選ぶ</b><span class="note">当日レイアウト・次回レイアウトそれぞれに1枚ずつアップロードできます。</span></li>
           <li><b>プレビューを確認する</b><span class="note">アップロードした画像はそのブロックに保持され、他のタブへ切り替えても消えません。</span></li>
-          <li><b>「③ 利用確認書」でPDFを作成する</b><span class="note">アップロードした画像が「◆レイアウト図」として、スタッフ用・サイン用どちらのPDFにも自動で反映されます。</span></li>
+          <li><b>「📄 レイアウト図PDFを作成」でPDFを作成する</b><span class="note">アップロードした画像だけを横向きPDFとして書き出します（画像1枚につき1ページ）。</span></li>
         </ol>
         <div class="callout caution"><span class="ic">注意</span><div>アップロードした画像はデータ量が大きいため、「💾 保存」（案件データベースへの保存）の対象には含まれません。保存済みの案件をURLや読み込みで開き直した場合、画像は再アップロードが必要です。PDF化する直前にアップロードしてください。</div></div>
+        <div class="callout tip"><span class="ic">POINT</span><div>レイアウト図は「③ 利用確認書」のPDF（スタッフ用・サイン用）には含まれません。レイアウト図が必要な場合は、この「📄 レイアウト図PDFを作成」で別ファイルとして発行してください。</div></div>
       </div>
     </section>
 
@@ -303,11 +304,11 @@ footer.foot{padding:26px 56px 40px;color:var(--ink-soft);font-size:12px;display:
       <div class="slide-body wide">
         <table class="field-table">
           <tr><th>入力欄</th><th>内容</th></tr>
-          <tr><td class="k">ヘッダ・ご利用内容</td><td class="v">立会担当・営業担当は入力欄。<b>利用日・利用時間は①ヒアリングシートの内容を自動反映する読み取り専用欄</b>です。</td></tr>
+          <tr><td class="k">ヘッダ・ご利用内容</td><td class="v">立会担当は入力欄。<b>営業担当・利用日・利用時間は①ヒアリングシートの内容を自動反映する読み取り専用欄</b>です（変更する場合は①側で修正してください）。</td></tr>
           <tr><td class="k">ご成約内容サマリー</td><td class="v">「🔄 テキスト出力を反映」で①の内容から自動生成（①で「あり」にした会場固有オプションも含まれます）。太字・文字色を選んで編集可能。</td></tr>
           <tr><td class="k">◆立会スタッフ共有事項</td><td class="v">「共有事項テンプレ」スプレッドシートの内容を初期表示。スタッフ用PDFにのみ反映されます。</td></tr>
           <tr><td class="k">◆標準オプション／◆その他オプション（自由記述）</td><td class="v">前章の通り。①で「あり」にした会場固有オプションだけがここに表示されます。単価・数量を入力すると税抜合計・維持管理費が自動更新されます。</td></tr>
-          <tr><td class="k">◆お支払い状況</td><td class="v">事前確定金額・支払方法など。支払方法を選ぶと、お客様向けの注意文が自動で切り替わります。</td></tr>
+          <tr><td class="k">◆お支払い状況</td><td class="v">事前確定金額・支払方法など。支払期限は①の日付欄と同じカレンダー選択式です。支払方法を選ぶと、お客様向けの注意文が自動で切り替わります。</td></tr>
           <tr><td class="k">担当者確認欄</td><td class="v">サイン用PDFにのみ表示される署名欄です。</td></tr>
         </table>
         <div class="mockup-label">PDF発行ボタン</div>
@@ -326,8 +327,12 @@ footer.foot{padding:26px 56px 40px;color:var(--ink-soft);font-size:12px;display:
         <div class="mockup-label">テキスト出力欄のボタン（実際の表示）</div>
         <div class="mockrow">
           <span class="chip" style="background:#1d4ed81f;color:#1a3fb8;border:1.5px solid #1d4ed8">📝 テキスト出力を生成</span>
+          <span class="chip" style="background:var(--tint2);color:var(--ink);border:1.5px solid var(--line)">📣 成約報告</span>
+          <span class="chip" style="background:var(--tint2);color:var(--ink);border:1.5px solid var(--line)">🗓️ 1週間前共有</span>
+          <span class="chip" style="background:var(--tint2);color:var(--ink);border:1.5px solid var(--line)">📌 前日共有</span>
           <span class="chip" style="background:var(--tint2);color:var(--ink);border:1.5px solid var(--line)">コピー</span>
         </div>
+        <div class="callout tip"><span class="ic">POINT</span><div>「📣 成約報告」「🗓️ 1週間前共有」「📌 前日共有」は、社内で決まった定型フォーマットを自動生成するボタンです。会場名・利用日時・人数・食事プラン/ドリンクタイプなど分かる範囲は自動で埋まり、当日記入が必要な部分（最終確定日・スケジュール時刻など）はプレースホルダのまま残ります。「前日共有」は末尾に「📝 テキスト出力を生成」と同じ内容がそのまま挿入されます。</div></div>
         <div class="mockup-label">出力イメージ（タブ区切り・カテゴリ別）</div>
         <div class="example">会場	グレイドパーク渋谷
 会場住所	東京都渋谷区○○1-2-3

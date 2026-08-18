@@ -197,11 +197,6 @@ function renderConfirmationHtml_(variant, d, venue) {
       staffShareBody + '</div>'
     : '';
 
-  var layoutSec = '';
-  if (d.layoutDayImg) layoutSec += '<div class="layout-block"><div class="layout-cap">当日レイアウト</div><img class="layout-img" src="' + d.layoutDayImg + '"></div>';
-  if (d.layoutNextImg) layoutSec += '<div class="layout-block"><div class="layout-cap">次回レイアウト</div><img class="layout-img" src="' + d.layoutNextImg + '"></div>';
-  if (layoutSec) layoutSec = '<div class="sec">◆レイアウト図</div>' + layoutSec;
-
   var signBlock = !isStaff
     ? '<div class="sec sign">担当者確認欄</div>' +
       '<div class="sign"><div class="st">ご確認・ご署名</div>' +
@@ -244,7 +239,6 @@ function renderConfirmationHtml_(variant, d, venue) {
       '<tr><th class="k">ご利用人数</th><td colspan="3">' + ce_(d.headcount || '') + '</td></tr></table>' +
     '<div class="sec">ご成約内容サマリー</div><div class="summary">' +
       (d.summaryHtml != null ? sanitizeRichHtml_(d.summaryHtml) : ce_(d.summary || '')) + '</div>' +
-    layoutSec +
     staffShare +
     '<div class="sec">◆標準オプション（全会場共通）</div>' +
     '<div style="font-size:10px;color:#666;margin-bottom:3px">スペース延長系は単価未確定(当日手入力)。ゴミ処理・飲み放題は税別・会場により編集可。数量・税抜合計は当日記入。</div>' +

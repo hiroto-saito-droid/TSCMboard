@@ -257,7 +257,11 @@ function renderHearing(){
   const b=activeBlock();
   let html=`<div class="tools">
     <details open><summary>📄 テキスト出力</summary>
-      <div><button class="toolbtn" onclick="doExport()">📝 テキスト出力を生成</button><button class="toolbtn sec" onclick="copyOut()">コピー</button></div>
+      <div><button class="toolbtn" onclick="doExport()">📝 テキスト出力を生成</button>
+      <button class="toolbtn sec" onclick="doExportTmpl('houkoku')">📣 成約報告</button>
+      <button class="toolbtn sec" onclick="doExportTmpl('isshukan')">🗓️ 1週間前共有</button>
+      <button class="toolbtn sec" onclick="doExportTmpl('zenjitsu')">📌 前日共有</button>
+      <button class="toolbtn sec" onclick="copyOut()">コピー</button></div>
       <textarea id="outText" readonly placeholder="「テキスト出力を生成」を押すと表示されます"></textarea></details></div>
   <div class="banner" id="cateringBanner"></div>
   <div class="legend"><span><span class="tag new">新設/変更</span>今回の修正</span><span><span class="tag rk">ラクラクパック関連</span></span><span><span class="tag ct">ケータリング関連</span></span><span><span class="tag ml">お食事関連</span></span></div>`;
@@ -363,6 +367,69 @@ function buildOutput(){
   return L.join('\n');
 }
 function doExport(){document.getElementById('outText').value=buildOutput();}
+const WEEKDAY_JP_=['日','月','火','水','木','金','土'];
+function formatDateJp_(iso){
+  if(!iso)return '';
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if(!m)return iso;
+  const d=new Date(+m[1],+m[2]-1,+m[3]);
+  return m[1]+'年'+(+m[2])+'月'+(+m[3])+'日（'+WEEKDAY_JP_[d.getDay()]+'）';
+}
+function payMethodText_(){
+  const pre=document.getElementById('prePay'),add=document.getElementById('addPay');
+  const v=(pre&&pre.value)||(add&&add.value)||'';
+  return v||'事前銀行振込or事前カード決済or当日現金or当日カード決済or後払い銀行振込';
+}
+// 3つの固定フォーマット(成約報告・1週間前共有・前日共有)。①ヒアリングシート・
+// ③利用確認書の入力内容から分かる範囲だけ自動反映し、それ以外は当日記入用の
+// プレースホルダのまま残す(依頼原文の文言をそのまま維持)。
+function tmplHoukoku_(){
+  const b=activeBlock();
+  const dateTime=formatDateJp_(q('日付'))+(q('時間')||'〇〇：〇〇～〇〇：〇〇');
+  return '※成約報告\nお疲れ様です。\n本件、成約となりました。\n\n'
+    +'〇スペース名：'+(b.venueName||'')+'\n'
+    +'〇利用日時：'+dateTime+'\n'
+    +'〇スケジュール\n００：００　ケータリング・飲み放題提供開始\n００：００　ケータリング・飲み放題提供終了（LO：００：００）\n'
+    +'〇プラン\n・フード\n・飲み放題\n'
+    +'〇人数：'+(q('来場人数')||'')+'\n'
+    +'〇決済方法（予定）：'+payMethodText_()+'\n'
+    +'〇最終確定日：〇月●日（〇）\n\n'
+    +'ご対応の程よろしくお願いいたします。';
+}
+function tmplIsshukan_(){
+  const b=activeBlock();
+  const dateTime=formatDateJp_(q('日付'))+(q('時間')||'');
+  const mealPlan=q('食事プラン');
+  const mealLine=mealPlan?mealPlan+'プラン':'●●プラン（●● 品）※前のプラン場合は旧記載をする';
+  const drinkType=q('ドリンクタイプ');
+  let drinkLines;
+  if(/Aプラン/.test(drinkType))drinkLines='・飲み放題はＡプランです';
+  else if(/Bプラン/.test(drinkType))drinkLines='・飲み放題はＢプランです';
+  else drinkLines='・飲み放題は旧プランです（Ｂプランと同じ内容）\n・飲み放題はＡプランです\n・飲み放題はＢプランです';
+  const shimbashi=/新橋/.test(b.venueName||'')?'\n\n※新橋のみ\n〇サイネージ表示名：なしor表示名':'';
+  return '※1週間前共有\nお疲れ様です。\n1週間前の確定の共有内容です。\n以下ご確認をお願い致いたします。\n\n'
+    +'〇スペース名：'+(b.venueName||'')+'\n'
+    +'〇利用日時：'+dateTime+'\n'
+    +'〇人数　： '+(q('来場人数')||'')+'名\n'
+    +'〇 ケータリングお食事プラン：'+mealLine+'\n'
+    +'〇ドリンクプラン：\n'+drinkLines+'\n'
+    +'〇ドリンクオプション： 乾杯スパークリングワイン：∔550円(税込)/1名 あり or なし\n'
+    +'　　　　　　　　　 乾杯シャンパン：+1,100円(税込)/1名 あり or なし\n'
+    +'〇ケータリング提供時間帯： 00：00 - 00：00(LO:15分前)\n'
+    +'〇ファーストドリンク用意希望：  あり or なし  【ビール ●個・ハイボール ●個・ウーロン茶 ●個・ジンジャーエール ●個】\n'
+    +'〇レイアウト：デフォルト/立食/着席 \n※この時点でなるべくレイアウト図をもらって案件アプリにはる！\n'
+    +'〇支払い方法：'+payMethodText_()+'\n'
+    +'〇飲食提供重要事項：\n'
+    +'〇会場貸出重要事項：'
+    +shimbashi;
+}
+function tmplZenjitsu_(){
+  return '※前日共有\nお疲れ様です。\n明日ご対応いただく案件の前日共有です。\nーーー\n本予約サマリー内容\nーーー\n\n'+buildOutput();
+}
+function doExportTmpl(kind){
+  const fn=kind==='houkoku'?tmplHoukoku_:kind==='isshukan'?tmplIsshukan_:tmplZenjitsu_;
+  document.getElementById('outText').value=fn();
+}
 function copyOut(){const t=document.getElementById('outText');t.select();try{document.execCommand('copy');}catch(e){}}
 function previewImg(input,key){
   const f=input.files&&input.files[0];const box=document.getElementById(key+'-preview');const nm=document.getElementById(key+'-name');if(!f)return;
@@ -493,7 +560,7 @@ function renderConfirmation(){
   document.getElementById('confirmation').innerHTML=`
   <div class="banner">利用確認書（会場：<b>${esc(b.venueName||'(会場未入力)')}</b>${b.venueAddress?'　'+esc(b.venueAddress):''}）。</div>
   <div class="cfg"><h3>ヘッダ・ご利用内容</h3><div class="grid2">
-    <label class="inl">立会担当 <input id="confAttendant" type="text" value=""></label><label class="inl">営業担当 <input id="confSalesRep" type="text" value=""></label>
+    <label class="inl">立会担当 <input id="confAttendant" type="text" value=""></label><label class="inl">営業担当（①ヒアリングシートから自動反映） <input id="confSalesRep" type="text" value="${esc(q('営業担当')||'')}" readonly style="background:#0e1626;color:#94a3b8;cursor:not-allowed"></label>
     <label class="inl">利用日（①ヒアリングシートから自動反映） <input id="confUseDate" type="text" value="${esc(q('日付')||'')}" readonly style="background:#0e1626;color:#94a3b8;cursor:not-allowed"></label><label class="inl">利用時間（①ヒアリングシートから自動反映） <input id="confUseTime" type="text" value="${esc(q('時間')||'')}" readonly style="background:#0e1626;color:#94a3b8;cursor:not-allowed"></label></div></div>
   <div class="cfg"><h3>ご成約内容サマリー（テキスト出力を反映・編集可／太字・文字色を選択して変更可）</h3>
     <div class="richbar">${richToolbarHtml()}
@@ -511,7 +578,7 @@ function renderConfirmation(){
     <button type="button" class="toolbtn sec" onclick="addFreeFeeRow()" style="margin-top:8px">＋ 品目を追加</button></div>
   <div class="cfg"><h3>◆お支払い状況</h3><div class="grid2">
     <label class="inl">事前確定金額 <input id="confPreConfirmed" type="text" value=""></label><label class="inl">事前支払額 <input id="confPrePaid" type="text" value=""></label>
-    <label class="inl">(A)事前確定分未精算額 <input id="confBalance" type="text" value=""></label><label class="inl">支払期限 <input id="confPayDue" type="text" value=""></label>
+    <label class="inl">(A)事前確定分未精算額 <input id="confBalance" type="text" value=""></label><label class="inl">支払期限 <input id="confPayDue" type="date" value=""></label>
     <label class="inl">事前確定分の支払方法 <select id="prePay" onchange="updatePayNote()">${payOptHtml(PAY_PRE)}</select></label>
     <label class="inl">追加分の支払方法 <select id="addPay" onchange="updatePayNote()">${payOptHtml(PAY_ADD)}</select></label></div>
     <div style="margin-top:10px"><div style="font-size:11px;font-weight:700;color:#93c5fd;margin-bottom:4px">お支払いに関するご案内（支払方法により自動切替）</div>
@@ -559,11 +626,10 @@ function applyRichColor_(color){
 }
 function collectConfPayload_(variant){
   const b=activeBlock();
-  const imgs=b.layoutImgs||{};const nextOn=!!b.layoutNextEnabled;
   return {variant:variant,venueName:b.venueName||'',venueAddress:b.venueAddress||'',
-    salesRep:document.getElementById('confSalesRep').value,attendant:document.getElementById('confAttendant').value,
+    salesRep:q('営業担当'),attendant:document.getElementById('confAttendant').value,
     company:q('会社名'),client:q('担当者'),site:q('予約サイト'),
-    useDate:q('日付'),useTime:q('時間'),headcount:q('人数'),
+    useDate:q('日付'),useTime:q('時間'),headcount:q('来場人数'),
     summaryHtml:document.getElementById('seiyakuSummary').innerHTML,
     staffShareHtml:document.getElementById('staffShareEdit').innerHTML,
     standardFees:ensureStandardFees_(b),freeFees:ensureFreeFees_(b).filter(freeFeeOn_),
@@ -572,7 +638,6 @@ function collectConfPayload_(variant){
     prePaid:document.getElementById('confPrePaid').value,
     balance:document.getElementById('confBalance').value,
     payDue:document.getElementById('confPayDue').value,
-    layoutDayImg:imgs.day?imgs.day.data:'',layoutNextImg:(nextOn&&imgs.next)?imgs.next.data:'',
     prePayMethod:document.getElementById('prePay').value,addPayMethod:document.getElementById('addPay').value};
 }
 function makeConfPdf(variant){
