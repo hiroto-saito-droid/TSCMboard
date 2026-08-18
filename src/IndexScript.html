@@ -263,21 +263,15 @@ function renderHearing(){
       <button class="toolbtn sec" onclick="doExportTmpl('zenjitsu')">📌 前日共有</button>
       <button class="toolbtn sec" onclick="copyOut()">コピー</button></div>
       <textarea id="outText" readonly placeholder="「テキスト出力を生成」を押すと表示されます"></textarea></details></div>
-  <div class="banner" id="cateringBanner"></div>
-  <div class="legend"><span><span class="tag new">新設/変更</span>今回の修正</span><span><span class="tag rk">ラクラクパック関連</span></span><span><span class="tag ct">ケータリング関連</span></span><span><span class="tag ml">お食事関連</span></span></div>`;
+  <div class="banner" id="cateringBanner"></div>`;
   if(!HEARING.length){
     html+='<div class="banner">ヒアリング項目マスタが未取得、または項目が0件です。「ヒアリング項目マスタ」スプレッドシートを確認してください。</div>';
   }
   HEARING.forEach((sec,secIdx)=>{
     const rows=sec.items.map(it=>{
-      let tag='';
-      if(it.new)tag+='<span class="tag new">新設/変更</span>';
-      if(it.rakuraku)tag+='<span class="tag rk">ラクラクパック関連</span>';
-      if(it.catering)tag+='<span class="tag ct">ケータリング関連</span>';
-      if(it.meal)tag+='<span class="tag ml">お食事関連</span>';
       const rowcls='row'+(it.catering?' catering-detail':'');
       const memo=(it.memo||'').split('\n')[0];
-      return `<div class="${rowcls}"><div class="lbl">${esc(it.item)} ${tag}</div>
+      return `<div class="${rowcls}"><div class="lbl">${esc(it.item)}</div>
         <div class="field"><div class="ctl">${ctl(it)}</div>
         <input class="memo" type="text" value="${esc(memo)}" placeholder="備考メモ (任意)"></div></div>`;
     }).join('');
