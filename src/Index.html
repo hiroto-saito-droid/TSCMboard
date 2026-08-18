@@ -97,6 +97,7 @@ label.inl{display:flex;gap:6px;align-items:center;font-size:12px;color:#cbd5e1}
 </style></head><body>
 <div class="top"><div class="h1">TSCM 管理ボード<span class="sub">TIMESHARINGシリーズ全会場向け・会場自由入力・標準オプション共通マスタ駆動</span>
 <span id="statusPill" class="pill" style="background:#64748b33;color:#cbd5e1;border:1px solid #64748b">ステータス未設定</span>
+<button id="newCaseBtn" onclick="startNewCase()" class="pill" style="background:#f59e0b33;color:#fcd34d;border:1px solid #f59e0b;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="現在の内容を破棄して新規案件を開始">🆕 新規案件</button>
 <button id="saveCaseBtn" onclick="saveCurrentCase()" class="pill" style="background:#16a34a33;color:#86efac;border:1px solid #16a34a;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="現在の入力内容を保存">💾 保存</button>
 <button id="loadCaseBtn" onclick="openLoadCaseModal()" class="pill" style="background:#7c3aed33;color:#c4b5fd;border:1px solid #7c3aed;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="保存済みの案件を読み込む">📂 読み込み</button>
 <button id="caseUrlBtn" onclick="outputCaseUrl()" class="pill" style="background:#0ea5e933;color:#7dd3fc;border:1px solid #0ea5e9;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="この案件のURLを発行してコピー（未保存の場合は保存してから発行）">🔗 URL出力</button>

@@ -200,12 +200,14 @@ footer.foot{padding:26px 56px 40px;color:var(--ink-soft);font-size:12px;display:
         <div class="mockup-label">画面右上のヘッダ（実際の表示）</div>
         <div class="mockrow">
           <span class="chip status">● ステータス未設定</span>
+          <span class="chip" style="background:#f59e0b26;color:#9a5804">🆕 新規案件</span>
           <span class="chip save">💾 保存</span>
           <span class="chip load">📂 読み込み</span>
           <span class="chip url">🔗 URL出力</span>
         </div>
         <table class="field-table">
           <tr><th>ボタン</th><th>できること</th></tr>
+          <tr><td class="k">🆕 新規案件</td><td class="v">確認ダイアログの後、現在の入力内容をすべて破棄して白紙の新規案件を開始します。別のお客様・会場の案件を新しく作りたいときに使います（保存済みの案件データ自体は消えません）。</td></tr>
           <tr><td class="k">💾 保存</td><td class="v">今開いている案件の入力内容を保存します。初回保存時にID(caseId)が自動発行され、以後は同じボタンで上書き保存になります。</td></tr>
           <tr><td class="k">📂 読み込み</td><td class="v">保存済みの案件を一覧から呼び出します。会社名・担当者・会場名で検索可能。一覧の🗑ボタンから完全削除もできます。</td></tr>
           <tr><td class="k">🔗 URL出力</td><td class="v">今の案件専用のURLを発行してクリップボードにコピーします（未保存なら自動保存してから発行）。</td></tr>

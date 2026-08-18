@@ -11,6 +11,14 @@ let currentCaseId=null;
 // アップロード画像(layoutImgs)はデータ量が大きく、スプレッドシートのセル文字数上限に
 // 抵触しうるため、案件データとしての保存対象からは除外する（利用確認書PDFへの反映のみ）。
 function blocksForSave_(){return state.blocks.map(b=>{const c=Object.assign({},b);delete c.layoutImgs;return c;});}
+function startNewCase(){
+  if(!confirm('現在の入力内容を破棄して新規案件を開始します。よろしいですか？'))return;
+  currentCaseId=null;
+  state={blocks:[{id:1,venueName:'',venueAddress:'',snap:null}],active:1,seq:1};
+  const status=document.getElementById('saveCaseStatus');
+  if(status)status.textContent='新規案件を開始しました';
+  renderAll();
+}
 function saveCurrentCase(){
   snapshot();
   const b=activeBlock();
