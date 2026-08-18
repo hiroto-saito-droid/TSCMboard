@@ -328,38 +328,43 @@ function applyCatering(){
 }
 function q(item){const el=getEl(item);if(!el)return '';return readCtl(el).trim();}
 function qmemo(item){const el=getEl(item);if(!el)return '';const fl=el.closest('.field');const mm=fl?fl.querySelector('.memo'):null;return mm?mm.value.trim():'';}
-// テキスト出力／取込フォーマット: 「会場」「会場住所」の2行＋カテゴリごとの
-// 「項目\t内容\tメモ」タブ区切り一覧。会場マスタ選択式ではなくなったため、
-// GPCMボードの固定フォーマット出力(buildOutput)・旧バージョン専用パーサ群は廃止し、
-// HEARINGの内容をそのまま網羅的に書き出す/読み戻す汎用形式に一本化した。
+// 本予約サマリー(テキスト出力)。GPCMボードのbuildOutput()と同じ「【カテゴリ】＋
+// ・項目：値」形式の箇条書きスタイルに統一した(2026-08-19、以前は項目/内容/メモの
+// タブ区切りでHEARINGを網羅的に書き出す汎用形式だったが、GPCMボードと体裁が
+// 揃っていなかったため)。TSCMに実在する項目だけを対象にしている。
 function buildOutput(){
-  const pad2=n=>String(n).padStart(2,'0');
-  const now=new Date();
-  const nowStr=now.getFullYear()+'/'+pad2(now.getMonth()+1)+'/'+pad2(now.getDate())+' '+pad2(now.getHours())+':'+pad2(now.getMinutes());
   const b=activeBlock();
   const L=[];
   L.push('顧客管理URL：'+q('顧客管理URL'));
   L.push('見積書URL：'+qmemo('見積送付'));
   L.push('');
-  L.push('会場\t'+(b.venueName||''));
-  L.push('会場住所\t'+(b.venueAddress||''));
-  L.push('最終更新\t'+nowStr);
-  L.push('');
-  HEARING.forEach(sec=>{
-    L.push(sec.cat);
-    L.push('項目\t内容\tメモ');
-    sec.items.forEach(it=>{
-      L.push(it.item+'\t'+q(it.item)+'\t'+qmemo(it.item));
-    });
-    L.push('');
-  });
-  // 会場固有オプション(①ヒアリングシートで「あり」にしたもの)も成約内容サマリーに反映する。
+  L.push('会場：'+(b.venueName||''));
+  if(b.venueAddress)L.push('会場住所：'+b.venueAddress);
+  L.push('会社名：'+q('会社名'));
+  L.push('担当者：'+q('担当者'));
+  const d=q('日付'),tm=q('時間');
+  L.push('ご予約日時：'+d+(tm?' '+tm:''));
+  const headcount=q('来場人数');
+  L.push('人数：'+(headcount?headcount+'名':''));
+  L.push('用途：'+q('用途'));
+
+  const equipLines=[];
+  const proj=q('プロジェクター・スクリーン'); if(proj&&proj!=='なし')equipLines.push('・プロジェクター・スクリーン：'+proj);
+  const mic=q('マイク'); if(mic&&mic!=='無し')equipLines.push('・マイク：'+mic);
+  if(equipLines.length){L.push('');L.push('【設備】');equipLines.forEach(x=>L.push(x));}
+
+  const cateringKind=q('ケータリング区分');
+  if(cateringKind&&cateringKind!=='なし'){
+    L.push('');L.push('【ケータリング詳細】');
+    L.push('ケータリング区分：'+cateringKind);
+    const meal=q('食事プラン'); if(meal)L.push('食事プラン：'+meal);
+    const drink=q('ドリンクタイプ'); if(drink)L.push('ドリンクタイプ：'+drink);
+  }
+
   const freeOn=ensureFreeFees_(b).filter(freeFeeOn_);
   if(freeOn.length){
-    L.push('会場固有オプション');
-    L.push('品目\t内容\tメモ');
-    freeOn.forEach(o=>{ L.push((o.name||'(品目名未入力)')+'\tあり\t'); });
-    L.push('');
+    L.push('');L.push('【会場固有オプション】');
+    freeOn.forEach(o=>L.push('・'+(o.name||'(品目名未入力)')+'：あり'));
   }
   return L.join('\n');
 }
