@@ -111,6 +111,14 @@ function ce_(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+/** 数字だけ入力すればPDF上で¥表記になるようにする(数値でなければそのまま表示)。 */
+function money_(v) {
+  if (v === '' || v == null) return '';
+  var s = String(v).replace(/[,¥\s]/g, '');
+  var n = Number(s);
+  return isNaN(n) ? ce_(v) : '¥' + n.toLocaleString();
+}
+
 /** 成約サマリー・立会スタッフ共有事項の編集内容(太字・文字色付きHTML)を、許可したタグのみに絞って通す */
 function sanitizeRichHtml_(html) {
   html = String(html == null ? '' : html);
@@ -247,10 +255,13 @@ function renderConfirmationHtml_(variant, d, venue) {
     '<div class="sec">◆その他オプション（自由記述）</div>' +
     '<table class="fee"><thead><tr><th>品目</th><th style="width:100px">単価</th><th style="width:70px">数量</th><th style="width:70px">税表記</th></tr></thead><tbody>' + (freeRows || '<tr><td colspan="4" style="text-align:center;color:#888">なし</td></tr>') + '</tbody></table>' +
     '<div class="sec">◆お支払い状況</div><table>' +
-      '<tr><th class="k">事前確定金額</th><td>' + ce_(d.preConfirmed || '') + '</td><th class="k">事前支払額</th><td>' + ce_(d.prePaid || '') + '</td></tr>' +
-      '<tr><th class="k">(A)未精算額</th><td>' + ce_(d.balance || '') + '</td><th class="k">支払期限</th><td>' + ce_(d.payDue || '') + '</td></tr>' +
+      '<tr><th class="k">事前確定金額</th><td>' + money_(d.preConfirmed) + '</td><th class="k">事前支払額</th><td>' + money_(d.prePaid) + '</td></tr>' +
+      '<tr><th class="k">(A)未精算額</th><td>' + money_(d.balance) + '</td><th class="k">支払期限</th><td>' + ce_(d.payDue || '') + '</td></tr>' +
       '<tr><th class="k">事前確定分 支払方法</th><td>' + ce_(d.prePayMethod || '') + '</td><th class="k">追加分 支払方法</th><td>' + ce_(d.addPayMethod || '') + '</td></tr></table>' +
     '<div class="paynote">■ お支払いに関するご案内\n' + ce_(payNote) + '</div>' +
+    '<div class="sec">◆領収書</div><table>' +
+      '<tr><th class="k">宛名</th><td>' + ce_(d.receiptName || '') + '</td><th class="k">送付先</th><td>' + ce_(d.receiptAddress || '') + '</td></tr></table>' +
+    '<div class="paynote">恐れ入りますが、領収書の宛名を「上様」とすることはご遠慮いただいております。また、発行後の領収書を分割してのご発行も承っておりませんので、あらかじめご了承いただけますようお願いいたします。</div>' +
     signBlock +
     '<div class="foot">本書はTSCM管理ボードの入力内容をもとに自動生成されました（' +
       (isStaff ? 'スタッフ用・社内' : 'サイン用・お客様控') + '）。<br>' + ce_(venueName) +

@@ -490,7 +490,15 @@ const PAY_NOTE_SITE='予約サイトを通じてのお支払いとなります�
 const PAY_NOTE_TOJITSU='領収書は後日PDFにて発行いたします。\n※ジョブカン領収書は「但書：スペース利用に関する費用として」固定です。';
 function payNoteFor(v){v=v||'';if(/GMO/.test(v))return PAY_NOTE_GMO;if(/みずほ/.test(v))return PAY_NOTE_MIZUHO;if(/後払い/.test(v))return PAY_NOTE_ATO;if(/予約サイト/.test(v))return PAY_NOTE_SITE;if(/当日/.test(v))return PAY_NOTE_TOJITSU;return '';}
 function updatePayNote(){const s=document.getElementById('prePay'),a=document.getElementById('addPay'),n=document.getElementById('payNote');if(!n)return;const pn=s?payNoteFor(s.value):'',an=a?payNoteFor(a.value):'';if(!an||an===pn){n.textContent=pn;}else{n.textContent='【事前確定分の支払方法】'+pn+'\n\n【追加分の支払方法】'+an;}}
-const payOptHtml=a=>a.map(o=>`<option>${o}</option>`).join('');
+const payOptHtml=(a,sel)=>a.map(o=>`<option ${o===sel?'selected':''}>${o}</option>`).join('');
+// ③利用確認書タブ限定の入力欄(立会担当・事前確定金額など)は、①ヒアリングシートと違い
+// スナップショット機構がなく、renderConfirmation()が再実行されるたび(会場固有オプション
+// のあり/なし切替等)にvalue=""へ戻ってしまい入力内容がPDFへ反映されないバグがあったため、
+// ブロックごとの状態(b.conf)に保持し、再描画のたびに復元する方式に変更した。
+function ensureConf_(b){
+  if(!b.conf)b.conf={attendant:'',preConfirmed:'',prePaid:'',balance:'',payDue:'',prePayMethod:'',addPayMethod:'',receiptName:'',receiptAddress:''};
+  return b.conf;
+}
 function toNum_(v){const n=Number(v);return isNaN(n)?0:n;}
 function ensureStandardFees_(b){
   if(!b.standardFees){
@@ -557,10 +565,11 @@ function renderConfirmation(){
     <td style="width:26px"><button type="button" class="free-del" data-idx="${o._i}" title="この行を削除" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:14px">×</button></td>
   </tr>`).join('');
   const maintFee=computeMaintenanceFee_(b);
+  const cf=ensureConf_(b);
   document.getElementById('confirmation').innerHTML=`
   <div class="banner">利用確認書（会場：<b>${esc(b.venueName||'(会場未入力)')}</b>${b.venueAddress?'　'+esc(b.venueAddress):''}）。</div>
   <div class="cfg"><h3>ヘッダ・ご利用内容</h3><div class="grid2">
-    <label class="inl">立会担当 <input id="confAttendant" type="text" value=""></label><label class="inl">営業担当（①ヒアリングシートから自動反映） <input id="confSalesRep" type="text" value="${esc(q('営業担当')||'')}" readonly style="background:#0e1626;color:#94a3b8;cursor:not-allowed"></label>
+    <label class="inl">立会担当 <input id="confAttendant" type="text" value="${esc(cf.attendant)}"></label><label class="inl">営業担当（①ヒアリングシートから自動反映） <input id="confSalesRep" type="text" value="${esc(q('営業担当')||'')}" readonly style="background:#0e1626;color:#94a3b8;cursor:not-allowed"></label>
     <label class="inl">利用日（①ヒアリングシートから自動反映） <input id="confUseDate" type="text" value="${esc(q('日付')||'')}" readonly style="background:#0e1626;color:#94a3b8;cursor:not-allowed"></label><label class="inl">利用時間（①ヒアリングシートから自動反映） <input id="confUseTime" type="text" value="${esc(q('時間')||'')}" readonly style="background:#0e1626;color:#94a3b8;cursor:not-allowed"></label></div></div>
   <div class="cfg"><h3>ご成約内容サマリー（テキスト出力を反映・編集可／太字・文字色を選択して変更可）</h3>
     <div class="richbar">${richToolbarHtml()}
@@ -576,13 +585,17 @@ function renderConfirmation(){
   <div class="cfg"><h3>◆その他オプション（自由記述）</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">①ヒアリングシートの「会場固有オプション」で「あり」にした項目がここに表示されます。単価・数量はここで入力してください。ここで直接追加した品目は自動的に「あり」扱いになります。</div>
     <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税表記</th><th></th></tr></thead><tbody id="freeFeeTbody">${freeRows||'<tr><td colspan="5" style="text-align:center;color:#64748b">「あり」の会場固有オプションはありません</td></tr>'}</tbody></table>
     <button type="button" class="toolbtn sec" onclick="addFreeFeeRow()" style="margin-top:8px">＋ 品目を追加</button></div>
-  <div class="cfg"><h3>◆お支払い状況</h3><div class="grid2">
-    <label class="inl">事前確定金額 <input id="confPreConfirmed" type="text" value=""></label><label class="inl">事前支払額 <input id="confPrePaid" type="text" value=""></label>
-    <label class="inl">(A)事前確定分未精算額 <input id="confBalance" type="text" value=""></label><label class="inl">支払期限 <input id="confPayDue" type="date" value=""></label>
-    <label class="inl">事前確定分の支払方法 <select id="prePay" onchange="updatePayNote()">${payOptHtml(PAY_PRE)}</select></label>
-    <label class="inl">追加分の支払方法 <select id="addPay" onchange="updatePayNote()">${payOptHtml(PAY_ADD)}</select></label></div>
+  <div class="cfg"><h3>◆お支払い状況</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">事前確定金額・事前支払額・未精算額は数字だけ入力すればPDF上で¥表記になります。</div><div class="grid2">
+    <label class="inl">事前確定金額 <input id="confPreConfirmed" type="text" value="${esc(cf.preConfirmed)}" placeholder="数字のみ入力"></label><label class="inl">事前支払額 <input id="confPrePaid" type="text" value="${esc(cf.prePaid)}" placeholder="数字のみ入力"></label>
+    <label class="inl">(A)事前確定分未精算額 <input id="confBalance" type="text" value="${esc(cf.balance)}" placeholder="数字のみ入力"></label><label class="inl">支払期限 <input id="confPayDue" type="date" value="${esc(cf.payDue)}"></label>
+    <label class="inl">事前確定分の支払方法 <select id="prePay" onchange="updatePayNote()">${payOptHtml(PAY_PRE,cf.prePayMethod)}</select></label>
+    <label class="inl">追加分の支払方法 <select id="addPay" onchange="updatePayNote()">${payOptHtml(PAY_ADD,cf.addPayMethod)}</select></label></div>
     <div style="margin-top:10px"><div style="font-size:11px;font-weight:700;color:#93c5fd;margin-bottom:4px">お支払いに関するご案内（支払方法により自動切替）</div>
     <div id="payNote" style="white-space:pre-wrap;background:#0e1626;border:1px solid #334155;border-radius:8px;padding:8px 10px;font-size:12px;color:#cbd5e1"></div></div></div>
+  <div class="cfg"><h3>◆領収書</h3><div class="grid2">
+    <label class="inl">宛名 <input id="confReceiptName" type="text" value="${esc(cf.receiptName)}" placeholder="株式会社〇〇 御中 など"></label>
+    <label class="inl">送付先 <input id="confReceiptAddress" type="text" value="${esc(cf.receiptAddress)}" placeholder="郵送が必要な場合のみ入力"></label></div>
+    <div style="font-size:11px;color:#f0b866;margin-top:8px;padding:8px 10px;background:#1a140b;border:1px solid #7a5a1e;border-radius:8px">恐れ入りますが、領収書の宛名を「上様」とすることはご遠慮いただいております。また、発行後の領収書を分割してのご発行も承っておりませんので、あらかじめご了承いただけますようお願いいたします。</div></div>
   <div class="sign"><div class="st">担当者確認欄（サイン用のみ）</div><div style="font-size:12px;color:#cbd5e1">ご利用ありがとうございます。上記内容に間違いがなければ、ご署名ください。</div>
     <div class="chk">当日精算分の領収書は<label class="inl"><input type="checkbox">当日お渡し済</label><label class="inl"><input type="checkbox">後日PDF送付</label><label class="inl"><input type="checkbox">希望なし・当日精算なし</label></div>
     <div style="font-size:11px;color:#94a3b8">署名</div><div class="sign-line"></div></div>
@@ -599,6 +612,15 @@ function renderConfirmation(){
   document.querySelectorAll('.free-qty').forEach(el=>el.oninput=()=>{freeAll[+el.dataset.idx].qty=el.value===''?'':(+el.value||0);refreshMaintFee_();});
   document.querySelectorAll('.free-tax').forEach(el=>el.onchange=()=>{freeAll[+el.dataset.idx].taxType=el.value;refreshMaintFee_();});
   document.querySelectorAll('.free-del').forEach(el=>el.onclick=()=>delFreeFeeRow(+el.dataset.idx));
+  document.getElementById('confAttendant').oninput=e=>{cf.attendant=e.target.value;};
+  document.getElementById('confPreConfirmed').oninput=e=>{cf.preConfirmed=e.target.value;};
+  document.getElementById('confPrePaid').oninput=e=>{cf.prePaid=e.target.value;};
+  document.getElementById('confBalance').oninput=e=>{cf.balance=e.target.value;};
+  document.getElementById('confPayDue').oninput=e=>{cf.payDue=e.target.value;};
+  document.getElementById('prePay').addEventListener('change',e=>{cf.prePayMethod=e.target.value;});
+  document.getElementById('addPay').addEventListener('change',e=>{cf.addPayMethod=e.target.value;});
+  document.getElementById('confReceiptName').oninput=e=>{cf.receiptName=e.target.value;};
+  document.getElementById('confReceiptAddress').oninput=e=>{cf.receiptAddress=e.target.value;};
 }
 function richToolbarHtml(){
   return '<button type="button" class="toolbtn sec" onmousedown="event.preventDefault()" onclick="document.execCommand(\'bold\')"><b>B</b> 太字</button>'+
@@ -626,19 +648,18 @@ function applyRichColor_(color){
 }
 function collectConfPayload_(variant){
   const b=activeBlock();
+  const cf=ensureConf_(b);
   return {variant:variant,venueName:b.venueName||'',venueAddress:b.venueAddress||'',
-    salesRep:q('営業担当'),attendant:document.getElementById('confAttendant').value,
+    salesRep:q('営業担当'),attendant:cf.attendant,
     company:q('会社名'),client:q('担当者'),site:q('予約サイト'),
     useDate:q('日付'),useTime:q('時間'),headcount:q('来場人数'),
     summaryHtml:document.getElementById('seiyakuSummary').innerHTML,
     staffShareHtml:document.getElementById('staffShareEdit').innerHTML,
     standardFees:ensureStandardFees_(b),freeFees:ensureFreeFees_(b).filter(freeFeeOn_),
     maintenanceFee:computeMaintenanceFee_(b),
-    preConfirmed:document.getElementById('confPreConfirmed').value,
-    prePaid:document.getElementById('confPrePaid').value,
-    balance:document.getElementById('confBalance').value,
-    payDue:document.getElementById('confPayDue').value,
-    prePayMethod:document.getElementById('prePay').value,addPayMethod:document.getElementById('addPay').value};
+    preConfirmed:cf.preConfirmed,prePaid:cf.prePaid,balance:cf.balance,payDue:cf.payDue,
+    receiptName:cf.receiptName,receiptAddress:cf.receiptAddress,
+    prePayMethod:cf.prePayMethod,addPayMethod:cf.addPayMethod};
 }
 function makeConfPdf(variant){
   const d=collectConfPayload_(variant);
