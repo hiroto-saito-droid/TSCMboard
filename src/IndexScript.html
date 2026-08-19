@@ -19,7 +19,17 @@ function startNewCase(){
   if(status)status.textContent='新規案件を開始しました';
   renderAll();
 }
+// METAの必須項目が未入力の状態での保存を防ぐ(案件を特定するための情報が
+// 欠けたまま保存されるのを避けるため)。予約管理番号は任意項目のため対象外。
+const META_OPTIONAL_ITEMS_=['予約管理番号'];
+function metaMissingFields_(){
+  const sec=HEARING.find(s=>s.cat==='META');
+  if(!sec)return [];
+  return sec.items.filter(it=>META_OPTIONAL_ITEMS_.indexOf(it.item)===-1&&!q(it.item)).map(it=>it.item);
+}
 function saveCurrentCase(){
+  const missing=metaMissingFields_();
+  if(missing.length){alert('①ヒアリングシートのMETA区分が未入力のため保存できません。\n未入力項目: '+missing.join('、'));return;}
   snapshot();
   const b=activeBlock();
   const payload={caseId:currentCaseId,venueName:b.venueName||'',venueAddress:b.venueAddress||'',company:q('会社名'),client:q('担当者'),blocks:blocksForSave_()};
@@ -118,6 +128,8 @@ function outputCaseUrl(){
     if(status)status.textContent='URLをコピーしました';
   };
   if(currentCaseId){emit();return;}
+  const missing=metaMissingFields_();
+  if(missing.length){alert('①ヒアリングシートのMETA区分が未入力のため保存できません。\n未入力項目: '+missing.join('、'));return;}
   snapshot();
   const b=activeBlock();
   const payload={caseId:null,venueName:b.venueName||'',venueAddress:b.venueAddress||'',company:q('会社名'),client:q('担当者'),blocks:blocksForSave_()};
@@ -336,6 +348,7 @@ function buildOutput(){
   const b=activeBlock();
   const L=[];
   L.push('顧客管理URL：'+q('顧客管理URL'));
+  L.push('予約管理番号：'+q('予約管理番号'));
   L.push('見積書URL：'+qmemo('見積送付'));
   L.push('');
   L.push('会場：'+(b.venueName||''));
@@ -389,6 +402,7 @@ function tmplHoukoku_(){
   const b=activeBlock();
   const dateTime=formatDateJp_(q('日付'))+(q('時間')||'〇〇：〇〇～〇〇：〇〇');
   return '※成約報告\n\nお疲れ様です。\n本件、成約となりました。\n\n'
+    +'〇予約管理番号：'+(q('予約管理番号')||'')+'\n'
     +'〇スペース名：'+(b.venueName||'')+'\n'
     +'〇利用日時：'+dateTime+'\n'
     +'〇スケジュール\n００：００　ケータリング・飲み放題提供開始\n００：００　ケータリング・飲み放題提供終了（LO：００：００）\n'
@@ -410,6 +424,7 @@ function tmplIsshukan_(){
   else drinkLines='・飲み放題は旧プランです（Ｂプランと同じ内容）\n・飲み放題はＡプランです\n・飲み放題はＢプランです';
   const shimbashi=/新橋/.test(b.venueName||'')?'\n\n※新橋のみ\n〇サイネージ表示名：なしor表示名':'';
   return '※1週間前共有\n\nお疲れ様です。\n1週間前の確定の共有内容です。\n以下ご確認をお願い致いたします。\n\n'
+    +'〇予約管理番号：'+(q('予約管理番号')||'')+'\n'
     +'〇スペース名：'+(b.venueName||'')+'\n'
     +'〇利用日時：'+dateTime+'\n'
     +'〇人数　： '+(q('来場人数')||'')+'名\n'
