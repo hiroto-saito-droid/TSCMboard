@@ -256,9 +256,15 @@ footer.foot{padding:26px 56px 40px;color:var(--ink-soft);font-size:12px;display:
           <span class="chip" style="background:#1d4ed81f;color:#1a3fb8;border:1.5px solid #1d4ed8">会場A（渋谷） ×</span>
           <span class="chip" style="background:var(--tint);color:var(--ink);border:1.5px solid var(--line)">会場B（新宿） ×</span>
           <span class="chip" style="background:#0e7a5f1f;color:#0a5e46;border:1.5px solid #0e7a5f">＋ 会場/日程を追加（複数検討）</span>
+          <span class="chip" style="background:#0369a11f;color:#0369a1;border:1.5px solid #0369a1">📋 現在の内容をコピーして追加</span>
         </div>
+        <table class="field-table">
+          <tr><th>ボタン</th><th>追加されるブロックの内容</th></tr>
+          <tr><td class="k">＋ 会場/日程を追加（複数検討）</td><td class="v">中身が空の新しいブロックが追加されます（会場名・住所のみ現在の内容を引き継ぎます）。まったく別の日程をゼロから入力したい時に使います。</td></tr>
+          <tr><td class="k">📋 現在の内容をコピーして追加</td><td class="v">今表示している会場・日程の入力内容をそのままコピーした新しいブロックが追加されます。日付だけ変えて比較したい時に、入力の手間を省けます。</td></tr>
+        </table>
         <ol class="steps">
-          <li><b>「＋会場/日程を追加（複数検討）」を押す</b><span class="note">今の内容をそのまま複製した新しいブロックが追加されます。</span></li>
+          <li><b>目的に応じてどちらかのボタンを押す</b><span class="note">ゼロから入力するなら「＋会場/日程を追加」、今の内容を引き継ぐなら「📋 現在の内容をコピーして追加」。</span></li>
           <li><b>追加したブロックの会場名・住所を入力し直す</b><span class="note">比較したい会場名を上書き入力するだけです。</span></li>
           <li><b>チップをクリックして行き来する</b><span class="note">上部に並んだチップをクリックすると、その会場/日程の入力画面に切り替わります。不要になったブロックは×で削除できます。</span></li>
         </ol>
@@ -327,21 +333,45 @@ footer.foot{padding:26px 56px 40px;color:var(--ink-soft);font-size:12px;display:
         <div class="mockup-label">テキスト出力欄のボタン（実際の表示）</div>
         <div class="mockrow">
           <span class="chip" style="background:#1d4ed81f;color:#1a3fb8;border:1.5px solid #1d4ed8">📝 テキスト出力を生成</span>
+          <span class="chip" style="background:var(--tint2);color:var(--ink);border:1.5px solid var(--line)">📧 予約フロー</span>
           <span class="chip" style="background:var(--tint2);color:var(--ink);border:1.5px solid var(--line)">📣 成約報告</span>
           <span class="chip" style="background:var(--tint2);color:var(--ink);border:1.5px solid var(--line)">🗓️ 1週間前共有</span>
           <span class="chip" style="background:var(--tint2);color:var(--ink);border:1.5px solid var(--line)">📌 前日共有</span>
           <span class="chip" style="background:var(--tint2);color:var(--ink);border:1.5px solid var(--line)">コピー</span>
         </div>
-        <div class="callout tip"><span class="ic">POINT</span><div>「📣 成約報告」「🗓️ 1週間前共有」「📌 前日共有」は、社内で決まった定型フォーマットを自動生成するボタンです。会場名・利用日時・人数・食事プラン/ドリンクタイプなど分かる範囲は自動で埋まり、当日記入が必要な部分（最終確定日・スケジュール時刻など）はプレースホルダのまま残ります。「前日共有」は末尾に「📝 テキスト出力を生成」と同じ内容がそのまま挿入されます。</div></div>
-        <div class="mockup-label">出力イメージ（タブ区切り・カテゴリ別）</div>
-        <div class="example">会場	グレイドパーク渋谷
-会場住所	東京都渋谷区○○1-2-3
-最終更新	2026/08/17 19:40
+        <table class="field-table">
+          <tr><th>ボタン</th><th>用途</th></tr>
+          <tr><td class="k">📧 予約フロー</td><td class="v">成約後にお客様へ送る案内メール（無料会員登録・利用規約への同意・お支払い方法・1週間前にご連絡いただく内容・オプション一覧など）の下書きを生成します。会社名・担当者・会場名・利用日時・ケータリング内容（ケータリング区分が「なし」以外の場合）は自動で埋まります。金額欄やオプション一覧の要不要は自動判定できないため、送信前に必ず内容を確認し、不要な行の削除・金額の記入をしてください。</td></tr>
+        </table>
+        <div class="callout tip"><span class="ic">POINT</span><div>「📣 成約報告」「🗓️ 1週間前共有」「📌 前日共有」は、社内で決まった定型フォーマットを自動生成するボタンです。顧客管理URL・予約管理URL・予約管理番号・見積書URL・会場名・利用日時・人数・食事プラン/ドリンクタイプ・食事/飲み放題の提供時間帯など分かる範囲は自動で埋まり、当日記入が必要な部分（最終確定日など）はプレースホルダのまま残ります。「前日共有」は末尾に「📝 テキスト出力を生成」と同じ内容がそのまま挿入されます。</div></div>
+        <div class="mockup-label">「📝 テキスト出力を生成」の出力イメージ（サンプルデータ・全文）</div>
+        <div class="example">顧客管理URL：https://example.com/crm/12345
+予約管理URL：https://time-sharing.jp/reservation/67890
+予約管理番号：TS-2026-0123
+見積書URL：https://drive.google.com/file/d/xxxxxxxxxxxxxxxx/view
 
-META
-項目	内容	メモ
-会社名	株式会社サンプル
-担当者	山田	</div>
+会場：グレイドパーク渋谷
+会場住所：東京都渋谷区○○1-2-3
+会社名：株式会社サンプル
+担当者：山田
+ご予約日時：2026-09-16 18:00～21:00
+人数：50名
+用途：懇親会
+
+【設備】
+・プロジェクター・スクリーン：両方あり
+・マイク：有線2本
+
+【ケータリング詳細】
+ケータリング区分：自社
+食事プラン：プティビュッフェ(7品)
+食事提供時間帯：18:30～20:30
+ドリンクタイプ：Aプラン(スタンダード)
+飲み放題提供時間帯：18:30～20:15
+
+【会場固有オプション】
+・プロジェクター増設：あり</div>
+        <div class="callout tip"><span class="ic">POINT</span><div>【設備】【ケータリング詳細】【会場固有オプション】は、入力・選択した内容に応じて該当する行だけが出力されます（未選択の項目は表示されません）。</div></div>
         <div class="callout tip"><span class="ic">POINT</span><div>①で「あり」にした会場固有オプションも、出力の末尾に「会場固有オプション」の区分としてまとめて含まれます。</div></div>
         <div class="callout caution"><span class="ic">注意</span><div>この出力は貼り付け用の控えです（旧バージョンのようなボードへの取込機能はありません）。「コピー」ボタンでクリップボードにコピーできます。</div></div>
       </div>
