@@ -20,6 +20,14 @@ function doGet(e) {
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
+  // 管理者(齋藤様)専用メモ。スタッフ向けマニュアル・アプリ本体のどこからもリンクしない
+  // (このURLを知っている人だけがアクセスする想定)。本番/検証URLの区別を記載。
+  if (e && e.parameter && e.parameter.page === 'admin') {
+    return HtmlService.createHtmlOutputFromFile('Admin')
+      .setTitle('TSCMボード管理者メモ')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
   var t = HtmlService.createTemplateFromFile('Index');
   t.initialCaseId = (e && e.parameter && e.parameter.case) ? e.parameter.case : '';
   return t.evaluate()

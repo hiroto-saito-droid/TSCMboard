@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSCMボード管理者メモ</title>
+<style>
+:root{
+  --paper:#F6F4EE; --surface:#FFFFFF; --ink:#1C2B33; --ink-soft:#5B6B72;
+  --accent:#2B6777; --accent-strong:#184652; --tint:#E7EEEC; --tint2:#EFEBDF;
+  --line:#DAD5C8; --amber:#A8672B; --amber-tint:#F3E6D4; --caution:#9B3B33; --caution-tint:#F3E1DE;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  --sans: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic Medium", "Noto Sans JP", sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#171B1E; --surface:#1E2428; --ink:#E9E6DD; --ink-soft:#9BA8AC;
+    --accent:#6FB6C4; --accent-strong:#8FD0DC; --tint:#212B2E; --tint2:#232821;
+    --line:#2C3438; --amber:#D79A5C; --amber-tint:#2E2620; --caution:#D48176; --caution-tint:#2E201F;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#171B1E; --surface:#1E2428; --ink:#E9E6DD; --ink-soft:#9BA8AC;
+  --accent:#6FB6C4; --accent-strong:#8FD0DC; --tint:#212B2E; --tint2:#232821;
+  --line:#2C3438; --amber:#D79A5C; --amber-tint:#2E2620; --caution:#D48176; --caution-tint:#2E201F;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.75;padding:0}
+.wrap{max-width:760px;margin:0 auto;padding:48px 28px 80px}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-strong);font-weight:600}
+h1{font-size:26px;font-weight:800;margin:14px 0 6px;color:var(--ink)}
+h2{font-size:16px;font-weight:800;margin:34px 0 10px;padding-left:10px;border-left:4px solid var(--accent);color:var(--ink)}
+p{margin:0 0 10px;color:var(--ink-soft)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px}
+.card .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-strong);margin-bottom:4px}
+.card a{color:var(--accent-strong);word-break:break-all;font-family:var(--mono);font-size:12.5px}
+.tag{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;border-radius:5px;padding:2px 8px;margin-left:8px}
+.tag.prod{background:var(--caution-tint);color:var(--caution)}
+.tag.dev{background:var(--amber-tint);color:var(--amber)}
+.callout{background:var(--tint);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13.5px;color:var(--ink-soft);margin:10px 0}
+.callout b{color:var(--ink)}
+code{font-family:var(--mono);font-size:12.5px;background:var(--tint2);padding:1px 6px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="eyebrow">Internal · 齋藤様専用</span>
+  <h1>TSCMボード 管理者メモ</h1>
+  <p>スタッフ向けマニュアル・アプリ本体のどこからもリンクしていない、齋藤様ご自身の確認・作業用ページです。このページのURLはご自身のブックマークにのみ登録してください。</p>
+
+  <h2>デプロイURL</h2>
+  <div class="card">
+    <div class="lbl">本番<span class="tag prod">スタッフ使用中・変更禁止</span></div>
+    <a href="https://script.google.com/a/macros/adval.jp/s/AKfycbxPRYx_2qBpq5OTJL7x8iZcseYcjp38jbNGDpxaV5CVjU_q_EhQGAVZzAP2LnfMId_Jig/exec" target="_blank" rel="noopener">https://script.google.com/a/macros/adval.jp/s/AKfycbxPRYx_2qBpq5OTJL7x8iZcseYcjp38jbNGDpxaV5CVjU_q_EhQGAVZzAP2LnfMId_Jig/exec</a>
+  </div>
+  <div class="card">
+    <div class="lbl">検証用<span class="tag dev">動作確認はこちらで</span></div>
+    <a href="https://script.google.com/a/macros/adval.jp/s/AKfycbwe3avIcGdzpcH15ZBmGDLQJ9AJOwly4szTIpQwNK6L/exec" target="_blank" rel="noopener">https://script.google.com/a/macros/adval.jp/s/AKfycbwe3avIcGdzpcH15ZBmGDLQJ9AJOwly4szTIpQwNK6L/exec</a>
+    <p style="margin-top:6px;font-size:12.5px">@HEADデプロイ(常に最新の保存内容を自動配信)。ここで確認して問題なければ、本番への反映を指示してください。</p>
+  </div>
+
+  <div class="callout"><b>運用ルール</b>：修正・機能追加は必ず検証用URLで動作確認してから、本番URLへの反映可否をご判断ください。指示がない限り本番URLは更新されません。</div>
+
+  <h2>関連リンク</h2>
+  <div class="card"><div class="lbl">GitHubリポジトリ</div><a href="https://github.com/hiroto-saito-droid/TSCMboard" target="_blank" rel="noopener">https://github.com/hiroto-saito-droid/TSCMboard</a></div>
+  <div class="card"><div class="lbl">TSCM_共通マスタ・案件データ スプレッドシート</div><a href="https://docs.google.com/spreadsheets/d/1g9Nrqdo33DCV0a-RufiQxFteW_y0lw525Tvj2GxlAJ0/edit" target="_blank" rel="noopener">TSCM_共通マスタ</a>／<a href="https://docs.google.com/spreadsheets/d/1zRRDTTt9luoiH5Za8ooi00AOBC-bJwNMeWI4jGYfD60/edit" target="_blank" rel="noopener">TSCM_管理システム(案件データ)</a></div>
+  <div class="card"><div class="lbl">姉妹ボード(GPCM)の同メモ</div><a href="https://script.google.com/a/macros/adval.jp/s/AKfycbxfR4vizGe9ktflH2NbumISq6E-PdQ-jO2IlJzw-Op6mWO4Y536b39neNNfA5RxprkT/exec?page=admin" target="_blank" rel="noopener">?page=admin (GPCM本番URL経由)</a></div>
+
+  <h2>スタッフ向けマニュアル(参考・こちらは共有OK)</h2>
+  <div class="card"><a href="https://script.google.com/a/macros/adval.jp/s/AKfycbxPRYx_2qBpq5OTJL7x8iZcseYcjp38jbNGDpxaV5CVjU_q_EhQGAVZzAP2LnfMId_Jig/exec?page=manual" target="_blank" rel="noopener">?page=manual</a></div>
+</div>
+</body>
+</html>
