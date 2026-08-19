@@ -21,7 +21,7 @@ function startNewCase(){
 }
 // METAの必須項目が未入力の状態での保存を防ぐ(案件を特定するための情報が
 // 欠けたまま保存されるのを避けるため)。予約管理番号は任意項目のため対象外。
-const META_OPTIONAL_ITEMS_=['予約管理番号'];
+const META_OPTIONAL_ITEMS_=['予約管理URL','予約管理番号'];
 function metaMissingFields_(){
   const sec=HEARING.find(s=>s.cat==='META');
   if(!sec)return [];
@@ -348,6 +348,7 @@ function buildOutput(){
   const b=activeBlock();
   const L=[];
   L.push('顧客管理URL：'+q('顧客管理URL'));
+  L.push('予約管理URL：'+q('予約管理URL'));
   L.push('予約管理番号：'+q('予約管理番号'));
   L.push('見積書URL：'+qmemo('見積送付'));
   L.push('');
@@ -371,7 +372,9 @@ function buildOutput(){
     L.push('');L.push('【ケータリング詳細】');
     L.push('ケータリング区分：'+cateringKind);
     const meal=q('食事プラン'); if(meal)L.push('食事プラン：'+meal);
+    const mealTime=q('食事プラン（提供時間帯）'); if(mealTime)L.push('食事提供時間帯：'+mealTime);
     const drink=q('ドリンクタイプ'); if(drink)L.push('ドリンクタイプ：'+drink);
+    const drinkTime=q('ドリンクタイプ（提供時間帯）'); if(drinkTime)L.push('飲み放題提供時間帯：'+drinkTime);
   }
 
   const freeOn=ensureFreeFees_(b).filter(freeFeeOn_);
@@ -397,15 +400,42 @@ function payMethodText_(){
 }
 // 3つの固定フォーマット(成約報告・1週間前共有・前日共有)。①ヒアリングシート・
 // ③利用確認書の入力内容から分かる範囲だけ自動反映し、それ以外は当日記入用の
-// プレースホルダのまま残す(依頼原文の文言をそのまま維持)。
+// プレースホルダのまま残す(依頼原文の文言をそのまま維持)。GPCMボードと共通仕様。
+// timerange型の値("開始～終了")を{start,end}に分解する。未入力ならnull。
+function parseTimeRangeStr_(v){
+  if(!v||v.indexOf('～')<0)return null;
+  const p=v.split('～');
+  return {start:p[0]||'',end:p[1]||''};
+}
+// "HH:MM"からmins分だけ前の時刻を返す(日跨ぎは翌日側に繰り上げない単純計算)。
+function subtractMinutes_(hhmm,mins){
+  const m=hhmm&&hhmm.match(/^(\d{1,2}):(\d{2})$/);if(!m)return '';
+  let total=(+m[1])*60+(+m[2])-mins;if(total<0)total+=24*60;
+  return String(Math.floor(total/60)%24).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
+}
+// 食事プラン・ドリンクタイプの提供時間帯から実際のケータリングスケジュールを算出する
+// (両方入力されている場合は最も早い開始～最も遅い終了をまとめて使う)。
+// LO(ラストオーダー)は終了時刻の15分前として自動計算する。未入力の項目は
+// 「００：００」のプレースホルダのまま残す。成約報告・1週間前共有の両テンプレで共用。
+function cateringSchedule_(){
+  const mealR=parseTimeRangeStr_(q('食事プラン（提供時間帯）'));
+  const drinkR=parseTimeRangeStr_(q('ドリンクタイプ（提供時間帯）'));
+  const starts=[mealR&&mealR.start,drinkR&&drinkR.start].filter(Boolean).sort();
+  const ends=[mealR&&mealR.end,drinkR&&drinkR.end].filter(Boolean).sort();
+  const start=starts.length?starts[0]:'００：００';
+  const end=ends.length?ends[ends.length-1]:'００：００';
+  const lo=ends.length?subtractMinutes_(end,15):'００：００';
+  return {start,end,lo};
+}
 function tmplHoukoku_(){
   const b=activeBlock();
   const dateTime=formatDateJp_(q('日付'))+(q('時間')||'〇〇：〇〇～〇〇：〇〇');
+  const sch=cateringSchedule_();
   return '※成約報告\n\nお疲れ様です。\n本件、成約となりました。\n\n'
     +'〇予約管理番号：'+(q('予約管理番号')||'')+'\n'
     +'〇スペース名：'+(b.venueName||'')+'\n'
     +'〇利用日時：'+dateTime+'\n'
-    +'〇スケジュール\n００：００　ケータリング・飲み放題提供開始\n００：００　ケータリング・飲み放題提供終了（LO：００：００）\n'
+    +'〇スケジュール\n'+sch.start+'　ケータリング・飲み放題提供開始\n'+sch.end+'　ケータリング・飲み放題提供終了（LO：'+sch.lo+'）\n'
     +'〇プラン\n・フード\n・飲み放題\n'
     +'〇人数：'+(q('来場人数')||'')+'\n'
     +'〇決済方法（予定）：'+payMethodText_()+'\n'
@@ -423,6 +453,7 @@ function tmplIsshukan_(){
   else if(/Bプラン/.test(drinkType))drinkLines='・飲み放題はＢプランです';
   else drinkLines='・飲み放題は旧プランです（Ｂプランと同じ内容）\n・飲み放題はＡプランです\n・飲み放題はＢプランです';
   const shimbashi=/新橋/.test(b.venueName||'')?'\n\n※新橋のみ\n〇サイネージ表示名：なしor表示名':'';
+  const sch=cateringSchedule_();
   return '※1週間前共有\n\nお疲れ様です。\n1週間前の確定の共有内容です。\n以下ご確認をお願い致いたします。\n\n'
     +'〇予約管理番号：'+(q('予約管理番号')||'')+'\n'
     +'〇スペース名：'+(b.venueName||'')+'\n'
@@ -432,7 +463,7 @@ function tmplIsshukan_(){
     +'〇ドリンクプラン：\n'+drinkLines+'\n'
     +'〇ドリンクオプション： 乾杯スパークリングワイン：∔550円(税込)/1名 あり or なし\n'
     +'　　　　　　　　　 乾杯シャンパン：+1,100円(税込)/1名 あり or なし\n'
-    +'〇ケータリング提供時間帯： 00：00 - 00：00(LO:15分前)\n'
+    +'〇ケータリング提供時間帯： '+sch.start+' - '+sch.end+'（LO：'+sch.lo+'）\n'
     +'〇ファーストドリンク用意希望：  あり or なし  【ビール ●個・ハイボール ●個・ウーロン茶 ●個・ジンジャーエール ●個】\n'
     +'〇レイアウト：デフォルト/立食/着席 \n※この時点でなるべくレイアウト図をもらって案件アプリにはる！\n'
     +'〇支払い方法：'+payMethodText_()+'\n'
