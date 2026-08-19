@@ -212,6 +212,7 @@ function renderVenueBar(){
   const favOptions=FAVORITE_VENUES.map(v=>`<option value="${esc(v.name)}">${esc(v.name)}</option>`).join('');
   document.getElementById('vbar').innerHTML=`<label>検討中の会場/日程</label>${chips}
     <button class="addbtn" onclick="addBlock()">＋会場/日程を追加（複数検討）</button>
+    <button class="addbtn" style="background:#0369a1" onclick="addBlockCopy()" title="現在表示中の会場/日程の入力内容をコピーして新規追加します">📋 現在の内容をコピーして追加</button>
     <span style="margin-left:auto"></span>
     <label>会場名</label><input id="venueNameInput" type="text" list="favoriteVenueList" value="${esc(b.venueName||'')}" placeholder="会場名を入力（自由記述）" style="min-width:200px">
     <datalist id="favoriteVenueList">${dl}</datalist>
@@ -262,6 +263,9 @@ function loadFavoriteVenues_(cb){
 }
 function switchBlock(id){snapshot();state.active=id;renderAll();}
 function addBlock(){snapshot();state.seq++;const cur=activeBlock();const nb={id:state.seq,venueName:cur.venueName||'',venueAddress:cur.venueAddress||'',snap:blankSnap()};state.blocks.push(nb);state.active=nb.id;renderAll();}
+// 現在検討中の会場/日程の入力内容をそのままコピーして新しいブロックを追加する。
+// 会場名・住所も引き継ぐため、日付だけ変えて比較したい等のケースで入力の手間を省ける。
+function addBlockCopy(){snapshot();const cur=activeBlock();state.seq++;const nb={id:state.seq,venueName:cur.venueName||'',venueAddress:cur.venueAddress||'',snap:JSON.parse(JSON.stringify(cur.snap||blankSnap()))};state.blocks.push(nb);state.active=nb.id;renderAll();}
 function removeBlock(id){if(state.blocks.length<=1)return;state.blocks=state.blocks.filter(b=>b.id!==id);if(state.active===id)state.active=state.blocks[0].id;renderAll();}
 const RAKU_NOTE={'フル':'現場復帰・ゴミ回収あり','ライト':'現場復帰(15分程度)・ゴミ回収(1袋目安)','なし':''};
 function renderHearing(){
