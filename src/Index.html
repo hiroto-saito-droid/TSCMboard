@@ -1,75 +1,75 @@
 <!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no"><title>TSCM 管理ボード</title><style>*,*::before,*::after{box-sizing:border-box}
-body{font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans',Meiryo,sans-serif;background:#0f172a;margin:0;color:#e2e8f0;font-size:13px}
-.top{position:sticky;top:0;z-index:10;background:#0b1220;border-bottom:1px solid #1e293b;padding:10px 18px}
-.top .h1{font-size:15px;font-weight:800;color:#fff;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+body{font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans',Meiryo,sans-serif;background:#f1f5f9;margin:0;color:#1e293b;font-size:13px}
+.top{position:sticky;top:0;z-index:10;background:#ffffff;border-bottom:1px solid #e2e8f0;padding:10px 18px}
+.top .h1{font-size:15px;font-weight:800;color:#0f172a;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .top .sub{font-size:11px;color:#64748b;font-weight:400}
 .pill{font-size:10px;border-radius:6px;padding:2px 8px;font-weight:800}
-.vbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;padding:8px 10px;background:#0e1a30;border:1px solid #24406e;border-radius:10px}
-.vbar label{font-size:11px;color:#93c5fd;font-weight:800}
-.chip{background:#1e293b;border:1px solid #334155;border-radius:20px;padding:4px 10px;font-size:11px;color:#cbd5e1;display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.vbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px}
+.vbar label{font-size:11px;color:#1d4ed8;font-weight:800}
+.chip{background:#f1f5f9;border:1px solid #cbd5e1;border-radius:20px;padding:4px 10px;font-size:11px;color:#334155;display:inline-flex;gap:6px;align-items:center;cursor:pointer}
 .chip.active{background:#1d4ed8;border-color:#1d4ed8;color:#fff;font-weight:800}
 .chip button{background:none;border:none;color:inherit;cursor:pointer;font-size:13px;padding:0;line-height:1}
 .addbtn{background:#0e7a5f;border:none;color:#fff;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:800;cursor:pointer}
 .tabs{display:flex;gap:4px;margin-top:10px;flex-wrap:wrap}
-.tabs button{background:none;border:none;color:#94a3b8;font-weight:700;font-size:13px;padding:8px 14px;cursor:pointer;border-bottom:2px solid transparent}
-.tabs button.active{color:#60a5fa;border-bottom-color:#3b82f6;background:#0e1a30}
+.tabs button{background:none;border:none;color:#64748b;font-weight:700;font-size:13px;padding:8px 14px;cursor:pointer;border-bottom:2px solid transparent}
+.tabs button.active{color:#1d4ed8;border-bottom-color:#3b82f6;background:#eff6ff}
 .wrap{max-width:1120px;margin:0 auto;padding:16px 18px 70px}
 .pane{display:none} .pane.active{display:block}
-.banner{background:#12203a;border:1px solid #24406e;border-radius:10px;padding:9px 13px;margin-bottom:12px;font-size:12px;color:#bcd2f5} .banner b{color:#fff}
+.banner{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:9px 13px;margin-bottom:12px;font-size:12px;color:#1e40af} .banner b{color:#0f172a}
 .legend{font-size:11px;color:#64748b;margin:2px 0 12px;display:flex;gap:14px;flex-wrap:wrap}
-select,input,textarea{font-family:inherit;background:#111827;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:6px 9px;font-size:12px}
+select,input,textarea{font-family:inherit;background:#ffffff;border:1px solid #cbd5e1;color:#1e293b;border-radius:8px;padding:6px 9px;font-size:12px}
 select:focus,input:focus,textarea:focus{outline:none;border-color:#3b82f6}
-.cat{border-radius:12px;margin-bottom:14px;overflow:hidden;border:1px solid #1e293b}
+.cat{border-radius:12px;margin-bottom:14px;overflow:hidden;border:1px solid #e2e8f0}
 .cat>.head{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-weight:800;font-size:13px;color:#fff}
 .cat .head .count{font-size:10.5px;font-weight:600;opacity:.85} .cat .head .chev{margin-left:auto}
 .cat.collapsed .body{display:none} .cat.collapsed .chev{transform:rotate(-90deg)}
-.body{background:#0b1220;padding:12px 14px}
-.row{display:grid;grid-template-columns:250px 1fr;gap:12px;padding:8px 0;border-bottom:1px dashed #1e293b;align-items:start} .row:last-child{border-bottom:none}
+.body{background:#ffffff;padding:12px 14px}
+.row{display:grid;grid-template-columns:250px 1fr;gap:12px;padding:8px 0;border-bottom:1px dashed #e2e8f0;align-items:start} .row:last-child{border-bottom:none}
 .row.hidden{display:none}
-.lbl{font-weight:700;color:#e2e8f0;font-size:12px;padding-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.lbl{font-weight:700;color:#1e293b;font-size:12px;padding-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .tag{font-size:9.5px;font-weight:800;border-radius:4px;padding:1px 6px}
-.tag.new{background:#0f2a1c;border:1px solid #2f8a55;color:#67c98c}
-.tag.rk{background:#3b0764;border:1px solid #a855f7;color:#e9d5ff}
-.tag.ct{background:#164e63;border:1px solid #06b6d4;color:#a5f3fc}
-.tag.ml{background:#7c2d12;border:1px solid #f97316;color:#fed7aa}
+.tag.new{background:#dcfce7;border:1px solid #22c55e;color:#15803d}
+.tag.rk{background:#f3e8ff;border:1px solid #a855f7;color:#6b21a8}
+.tag.ct{background:#cffafe;border:1px solid #06b6d4;color:#0e7490}
+.tag.ml{background:#ffedd5;border:1px solid #f97316;color:#9a3412}
 .taxbadge{font-size:9.5px;font-weight:800;border-radius:4px;padding:1px 6px;margin-left:4px;display:inline-block}
-.taxbadge.ex{background:#3b1d0a;border:1px solid #d97706;color:#fbbf24}
-.taxbadge.in{background:#1e1b4b;border:1px solid #6366f1;color:#a5b4fc}
+.taxbadge.ex{background:#fef3c7;border:1px solid #d97706;color:#92400e}
+.taxbadge.in{background:#e0e7ff;border:1px solid #6366f1;color:#3730a3}
 .field{display:flex;flex-direction:column;gap:6px} .field .ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .field select,.field input[type=text]{min-width:240px} .timerange{display:flex;gap:6px;align-items:center}
 textarea{width:100%;min-height:54px;resize:vertical}
-.memo{width:100%;background:#0e1626;border:1px dashed #334155;color:#cbd5e1;font-size:11px;border-radius:8px;padding:6px 9px} .memo::placeholder{color:#5b6b85}
+.memo{width:100%;background:#f8fafc;border:1px dashed #cbd5e1;color:#334155;font-size:11px;border-radius:8px;padding:6px 9px} .memo::placeholder{color:#94a3b8}
 .tools{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
-.tools details{background:#0b1220;border:1px solid #334155;border-radius:10px;padding:8px 12px}
-.tools summary{cursor:pointer;font-weight:800;color:#93c5fd;font-size:12px}
+.tools details{background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 12px}
+.tools summary{cursor:pointer;font-weight:800;color:#1d4ed8;font-size:12px}
 .tools textarea{margin-top:8px;min-height:130px;font-size:12px}
 .toolbtn{background:#1d4ed8;border:none;color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;margin:8px 6px 0 0}
-.toolbtn.sec{background:#334155;color:#cbd5e1}
+.toolbtn.sec{background:#e2e8f0;color:#334155}
 .richbar{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 .richbar select{padding:5px 8px}
-.richedit{width:100%;background:#fdfdfb;border:1px solid #334155;color:#1a1a1a;border-radius:8px;padding:8px 10px;font-size:12px;white-space:pre-wrap;overflow-y:auto;filter:invert(1) hue-rotate(180deg)}
+.richedit{width:100%;background:#fdfdfb;border:1px solid #cbd5e1;color:#1a1a1a;border-radius:8px;padding:8px 10px;font-size:12px;white-space:pre-wrap;overflow-y:auto}
 .richedit:focus{outline:none;border-color:#3b82f6}
-.cfg{background:#0b1220;border:1px solid #1e293b;border-radius:10px;padding:14px;margin-bottom:12px}
-.cfg h3{margin:0 0 8px;font-size:13px;color:#fff;border-left:4px solid #f43f5e;padding-left:8px}
+.cfg{background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px}
+.cfg h3{margin:0 0 8px;font-size:13px;color:#0f172a;border-left:4px solid #f43f5e;padding-left:8px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.fee{width:100%;border-collapse:collapse;font-size:11px}.fee th,.fee td{border:1px solid #334155;padding:4px 7px}.fee th{background:#111827}
-.sign{border:2px solid #f43f5e;border-radius:8px;padding:12px;margin-top:10px;background:#1a0f14}
-.sign .st{font-weight:800;color:#fda4af;margin-bottom:8px}
+.fee{width:100%;border-collapse:collapse;font-size:11px}.fee th,.fee td{border:1px solid #cbd5e1;padding:4px 7px}.fee th{background:#f1f5f9}
+.sign{border:2px solid #f43f5e;border-radius:8px;padding:12px;margin-top:10px;background:#fef2f2}
+.sign .st{font-weight:800;color:#dc2626;margin-bottom:8px}
 .chk{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;margin:6px 0}
-.sign-line{border-bottom:1.5px solid #64748b;height:40px;margin-top:20px}
-.layoutbox{border:1px dashed #334155;background:#0e1626;border-radius:10px;padding:14px;margin-bottom:12px}
-.imgslot{border:1px dashed #475569;border-radius:8px;min-height:150px;display:flex;align-items:center;justify-content:center;color:#64748b;overflow:hidden;background:#0b1220}
+.sign-line{border-bottom:1.5px solid #94a3b8;height:40px;margin-top:20px}
+.layoutbox{border:1px dashed #cbd5e1;background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px}
+.imgslot{border:1px dashed #cbd5e1;border-radius:8px;min-height:150px;display:flex;align-items:center;justify-content:center;color:#94a3b8;overflow:hidden;background:#f8fafc}
 .imgslot img{max-width:100%;max-height:340px}
 .uploadbar{display:flex;gap:10px;align-items:center;margin:8px 0;flex-wrap:wrap}
 .filebtn{display:inline-flex;align-items:center;gap:6px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
 .filebtn input{display:none}
-.clearbtn{background:#334155;color:#cbd5e1;border:none;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer}
-.footer{color:#475569;font-size:11px;text-align:center;margin-top:20px}
-label.inl{display:flex;gap:6px;align-items:center;font-size:12px;color:#cbd5e1}
-.venuenote{font-size:11px;color:#f0b866;margin-left:6px}
-.case-url-box{position:fixed;top:60px;right:20px;background:#0e1626;border:1px solid #0ea5e9;border-radius:8px;padding:10px;z-index:1001;display:flex;gap:6px;align-items:center;box-shadow:0 4px 16px rgba(0,0,0,.4)}
-.case-url-box input{width:340px;padding:6px;border-radius:4px;border:1px solid #334155;background:#0b1220;color:#e2e8f0}
-.case-url-box button{background:none;border:none;color:#94a3b8;font-size:16px;cursor:pointer}
+.clearbtn{background:#e2e8f0;color:#334155;border:none;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer}
+.footer{color:#94a3b8;font-size:11px;text-align:center;margin-top:20px}
+label.inl{display:flex;gap:6px;align-items:center;font-size:12px;color:#334155}
+.venuenote{font-size:11px;color:#b45309;margin-left:6px}
+.case-url-box{position:fixed;top:60px;right:20px;background:#ffffff;border:1px solid #0ea5e9;border-radius:8px;padding:10px;z-index:1001;display:flex;gap:6px;align-items:center;box-shadow:0 4px 16px rgba(15,23,42,.15)}
+.case-url-box input{width:340px;padding:6px;border-radius:4px;border:1px solid #cbd5e1;background:#f8fafc;color:#1e293b}
+.case-url-box button{background:none;border:none;color:#64748b;font-size:16px;cursor:pointer}
 /* ここから下はタブレット・スマートフォン専用。PC表示（下記条件を満たさない画面幅）には一切影響しない */
 @media (max-width:900px){
   .grid2{grid-template-columns:1fr}
@@ -96,19 +96,19 @@ label.inl{display:flex;gap:6px;align-items:center;font-size:12px;color:#cbd5e1}
 }
 </style></head><body>
 <div class="top"><div class="h1">TSCM 管理ボード<span class="sub">TIMESHARINGシリーズ全会場向け・会場自由入力・標準オプション共通マスタ駆動</span>
-<span id="statusPill" class="pill" style="background:#64748b33;color:#cbd5e1;border:1px solid #64748b">ステータス未設定</span>
-<button id="newCaseBtn" onclick="startNewCase()" class="pill" style="background:#f59e0b33;color:#fcd34d;border:1px solid #f59e0b;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="現在の内容を破棄して新規案件を開始">🆕 新規案件</button>
-<button id="saveCaseBtn" onclick="saveCurrentCase()" class="pill" style="background:#16a34a33;color:#86efac;border:1px solid #16a34a;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="現在の入力内容を保存">💾 保存</button>
-<button id="loadCaseBtn" onclick="openLoadCaseModal()" class="pill" style="background:#7c3aed33;color:#c4b5fd;border:1px solid #7c3aed;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="保存済みの案件を読み込む">📂 読み込み</button>
-<button id="caseUrlBtn" onclick="outputCaseUrl()" class="pill" style="background:#0ea5e933;color:#7dd3fc;border:1px solid #0ea5e9;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="この案件のURLを発行してコピー（未保存の場合は保存してから発行）">🔗 URL出力</button>
+<span id="statusPill" class="pill" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1">ステータス未設定</span>
+<button id="newCaseBtn" onclick="startNewCase()" class="pill" style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="現在の内容を破棄して新規案件を開始">🆕 新規案件</button>
+<button id="saveCaseBtn" onclick="saveCurrentCase()" class="pill" style="background:#dcfce7;color:#15803d;border:1px solid #16a34a;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="現在の入力内容を保存">💾 保存</button>
+<button id="loadCaseBtn" onclick="openLoadCaseModal()" class="pill" style="background:#f3e8ff;color:#6b21a8;border:1px solid #7c3aed;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="保存済みの案件を読み込む">📂 読み込み</button>
+<button id="caseUrlBtn" onclick="outputCaseUrl()" class="pill" style="background:#e0f2fe;color:#0369a1;border:1px solid #0ea5e9;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="この案件のURLを発行してコピー（未保存の場合は保存してから発行）">🔗 URL出力</button>
 <span id="saveCaseStatus" style="font-size:11px;color:#94a3b8"></span></div>
 <div id="loadCaseModal" onclick="if(event.target===this)closeLoadCaseModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center">
-  <div style="background:#0e1626;border:1px solid #334155;border-radius:10px;padding:20px;width:600px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column">
+  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;width:600px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(15,23,42,.12)">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <h3 style="margin:0;color:#e2e8f0">保存済み案件を読み込む</h3>
+      <h3 style="margin:0;color:#1e293b">保存済み案件を読み込む</h3>
       <button onclick="closeLoadCaseModal()" style="background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;line-height:1">×</button>
     </div>
-    <input id="loadCaseSearch" type="text" placeholder="会社名・担当者・会場名で検索…" oninput="renderLoadCaseList()" style="margin-bottom:10px;padding:8px;border-radius:6px;border:1px solid #334155;background:#0b1220;color:#e2e8f0">
+    <input id="loadCaseSearch" type="text" placeholder="会社名・担当者・会場名で検索…" oninput="renderLoadCaseList()" style="margin-bottom:10px;padding:8px;border-radius:6px;border:1px solid #cbd5e1;background:#ffffff;color:#1e293b">
     <div id="loadCaseList" style="overflow-y:auto;flex:1"></div>
   </div>
 </div>
