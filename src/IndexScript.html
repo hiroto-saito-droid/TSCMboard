@@ -21,7 +21,7 @@ function startNewCase(){
 }
 // METAの必須項目が未入力の状態での保存を防ぐ(案件を特定するための情報が
 // 欠けたまま保存されるのを避けるため)。予約管理番号は任意項目のため対象外。
-const META_OPTIONAL_ITEMS_=['予約管理番号'];
+const META_OPTIONAL_ITEMS_=['予約管理URL','予約管理番号'];
 function metaMissingFields_(){
   const sec=HEARING.find(s=>s.cat==='META');
   if(!sec)return [];
@@ -61,12 +61,12 @@ function renderLoadCaseList(){
   const filtered=loadCaseData.filter(c=>!kw||[c.company,c.client,c.venueName].some(s=>(s||'').toLowerCase().includes(kw)));
   const host=document.getElementById('loadCaseList');
   if(!filtered.length){host.innerHTML='<div style="color:#64748b;padding:10px">'+(loadCaseData.length?'該当する案件がありません':'保存済みの案件がまだありません')+'</div>';return;}
-  host.innerHTML=filtered.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:10px;border-bottom:1px solid #1e293b">
+  host.innerHTML=filtered.map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:10px;border-bottom:1px solid #e2e8f0">
     <div onclick="loadCaseById('${esc(c.caseId)}')" style="flex:1;cursor:pointer">
-      <div style="color:#e2e8f0;font-weight:600">${esc(c.company||'(会社名未入力)')}${c.client?'　／　'+esc(c.client):''}</div>
+      <div style="color:#1e293b;font-weight:600">${esc(c.company||'(会社名未入力)')}${c.client?'　／　'+esc(c.client):''}</div>
       <div style="color:#94a3b8;font-size:12px">${esc(c.venueName||'(会場未入力)')}　更新: ${esc(c.updatedAt||'')}${c.updatedBy?'（'+esc(c.updatedBy)+'）':''}</div>
     </div>
-    <button type="button" onclick="event.stopPropagation();deleteCaseById('${esc(c.caseId)}')" title="この案件を削除" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:16px;padding:4px">🗑</button>
+    <button type="button" onclick="event.stopPropagation();deleteCaseById('${esc(c.caseId)}')" title="この案件を削除" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px;padding:4px">🗑</button>
   </div>`).join('');
 }
 function deleteCaseById(caseId){
@@ -270,6 +270,7 @@ function renderHearing(){
   let html=`<div class="tools">
     <details open><summary>📄 テキスト出力</summary>
       <div><button class="toolbtn" onclick="doExport()">📝 テキスト出力を生成</button>
+      <button class="toolbtn sec" onclick="doExportTmpl('yoyakuflow')">📧 予約フロー</button>
       <button class="toolbtn sec" onclick="doExportTmpl('houkoku')">📣 成約報告</button>
       <button class="toolbtn sec" onclick="doExportTmpl('isshukan')">🗓️ 1週間前共有</button>
       <button class="toolbtn sec" onclick="doExportTmpl('zenjitsu')">📌 前日共有</button>
@@ -289,8 +290,8 @@ function renderHearing(){
     }).join('');
     // METAカテゴリ(顧客情報)には、上部の会場バーで入力した会場名を常に表示し、
     // どの案件の顧客情報かを一目で分かるようにする(vbarのinputと連動、syncMetaVenueLine_参照)。
-    const metaVenueRow=(sec.cat==='META')?`<div class="row" style="border-bottom:1.5px solid #334155"><div class="lbl">会場（①上部の会場バーから入力）</div>
-      <div class="field"><div class="ctl" style="font-weight:800;color:#fff" id="metaVenueLine">${esc(b.venueName||'(会場未入力)')}</div></div></div>`:'';
+    const metaVenueRow=(sec.cat==='META')?`<div class="row" style="border-bottom:1.5px solid #e2e8f0"><div class="lbl">会場（①上部の会場バーから入力）</div>
+      <div class="field"><div class="ctl" style="font-weight:800;color:#1e293b" id="metaVenueLine">${esc(b.venueName||'(会場未入力)')}</div></div></div>`:'';
     html+=`<div class="cat"><div class="head" style="background:${catColor(secIdx)}" data-toggle>
       <span>${esc(sec.cat)}</span><span class="count">（${sec.items.length}項目）</span><span class="chev">▾</span></div>
       <div class="body">${metaVenueRow}${rows}
@@ -348,6 +349,7 @@ function buildOutput(){
   const b=activeBlock();
   const L=[];
   L.push('顧客管理URL：'+q('顧客管理URL'));
+  L.push('予約管理URL：'+q('予約管理URL'));
   L.push('予約管理番号：'+q('予約管理番号'));
   L.push('見積書URL：'+qmemo('見積送付'));
   L.push('');
@@ -371,7 +373,9 @@ function buildOutput(){
     L.push('');L.push('【ケータリング詳細】');
     L.push('ケータリング区分：'+cateringKind);
     const meal=q('食事プラン'); if(meal)L.push('食事プラン：'+meal);
+    const mealTime=q('食事プラン（提供時間帯）'); if(mealTime)L.push('食事提供時間帯：'+mealTime);
     const drink=q('ドリンクタイプ'); if(drink)L.push('ドリンクタイプ：'+drink);
+    const drinkTime=q('ドリンクタイプ（提供時間帯）'); if(drinkTime)L.push('飲み放題提供時間帯：'+drinkTime);
   }
 
   const freeOn=ensureFreeFees_(b).filter(freeFeeOn_);
@@ -397,15 +401,45 @@ function payMethodText_(){
 }
 // 3つの固定フォーマット(成約報告・1週間前共有・前日共有)。①ヒアリングシート・
 // ③利用確認書の入力内容から分かる範囲だけ自動反映し、それ以外は当日記入用の
-// プレースホルダのまま残す(依頼原文の文言をそのまま維持)。
+// プレースホルダのまま残す(依頼原文の文言をそのまま維持)。GPCMボードと共通仕様。
+// timerange型の値("開始～終了")を{start,end}に分解する。未入力ならnull。
+function parseTimeRangeStr_(v){
+  if(!v||v.indexOf('～')<0)return null;
+  const p=v.split('～');
+  return {start:p[0]||'',end:p[1]||''};
+}
+// "HH:MM"からmins分だけ前の時刻を返す(日跨ぎは翌日側に繰り上げない単純計算)。
+function subtractMinutes_(hhmm,mins){
+  const m=hhmm&&hhmm.match(/^(\d{1,2}):(\d{2})$/);if(!m)return '';
+  let total=(+m[1])*60+(+m[2])-mins;if(total<0)total+=24*60;
+  return String(Math.floor(total/60)%24).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
+}
+// 食事プラン・ドリンクタイプの提供時間帯から実際のケータリングスケジュールを算出する
+// (両方入力されている場合は最も早い開始～最も遅い終了をまとめて使う)。
+// LO(ラストオーダー)は終了時刻の15分前として自動計算する。未入力の項目は
+// 「００：００」のプレースホルダのまま残す。成約報告・1週間前共有の両テンプレで共用。
+function cateringSchedule_(){
+  const mealR=parseTimeRangeStr_(q('食事プラン（提供時間帯）'));
+  const drinkR=parseTimeRangeStr_(q('ドリンクタイプ（提供時間帯）'));
+  const starts=[mealR&&mealR.start,drinkR&&drinkR.start].filter(Boolean).sort();
+  const ends=[mealR&&mealR.end,drinkR&&drinkR.end].filter(Boolean).sort();
+  const start=starts.length?starts[0]:'００：００';
+  const end=ends.length?ends[ends.length-1]:'００：００';
+  const lo=ends.length?subtractMinutes_(end,15):'００：００';
+  return {start,end,lo};
+}
 function tmplHoukoku_(){
   const b=activeBlock();
   const dateTime=formatDateJp_(q('日付'))+(q('時間')||'〇〇：〇〇～〇〇：〇〇');
+  const sch=cateringSchedule_();
   return '※成約報告\n\nお疲れ様です。\n本件、成約となりました。\n\n'
+    +'〇顧客管理URL：'+(q('顧客管理URL')||'')+'\n'
+    +'〇予約管理URL：'+(q('予約管理URL')||'')+'\n'
     +'〇予約管理番号：'+(q('予約管理番号')||'')+'\n'
+    +'〇見積書URL：'+(qmemo('見積送付')||'')+'\n'
     +'〇スペース名：'+(b.venueName||'')+'\n'
     +'〇利用日時：'+dateTime+'\n'
-    +'〇スケジュール\n００：００　ケータリング・飲み放題提供開始\n００：００　ケータリング・飲み放題提供終了（LO：００：００）\n'
+    +'〇スケジュール\n'+sch.start+'　ケータリング・飲み放題提供開始\n'+sch.end+'　ケータリング・飲み放題提供終了（LO：'+sch.lo+'）\n'
     +'〇プラン\n・フード\n・飲み放題\n'
     +'〇人数：'+(q('来場人数')||'')+'\n'
     +'〇決済方法（予定）：'+payMethodText_()+'\n'
@@ -423,8 +457,12 @@ function tmplIsshukan_(){
   else if(/Bプラン/.test(drinkType))drinkLines='・飲み放題はＢプランです';
   else drinkLines='・飲み放題は旧プランです（Ｂプランと同じ内容）\n・飲み放題はＡプランです\n・飲み放題はＢプランです';
   const shimbashi=/新橋/.test(b.venueName||'')?'\n\n※新橋のみ\n〇サイネージ表示名：なしor表示名':'';
+  const sch=cateringSchedule_();
   return '※1週間前共有\n\nお疲れ様です。\n1週間前の確定の共有内容です。\n以下ご確認をお願い致いたします。\n\n'
+    +'〇顧客管理URL：'+(q('顧客管理URL')||'')+'\n'
+    +'〇予約管理URL：'+(q('予約管理URL')||'')+'\n'
     +'〇予約管理番号：'+(q('予約管理番号')||'')+'\n'
+    +'〇見積書URL：'+(qmemo('見積送付')||'')+'\n'
     +'〇スペース名：'+(b.venueName||'')+'\n'
     +'〇利用日時：'+dateTime+'\n'
     +'〇人数　： '+(q('来場人数')||'')+'名\n'
@@ -432,7 +470,7 @@ function tmplIsshukan_(){
     +'〇ドリンクプラン：\n'+drinkLines+'\n'
     +'〇ドリンクオプション： 乾杯スパークリングワイン：∔550円(税込)/1名 あり or なし\n'
     +'　　　　　　　　　 乾杯シャンパン：+1,100円(税込)/1名 あり or なし\n'
-    +'〇ケータリング提供時間帯： 00：00 - 00：00(LO:15分前)\n'
+    +'〇ケータリング提供時間帯： '+sch.start+' - '+sch.end+'（LO：'+sch.lo+'）\n'
     +'〇ファーストドリンク用意希望：  あり or なし  【ビール ●個・ハイボール ●個・ウーロン茶 ●個・ジンジャーエール ●個】\n'
     +'〇レイアウト：デフォルト/立食/着席 \n※この時点でなるべくレイアウト図をもらって案件アプリにはる！\n'
     +'〇支払い方法：'+payMethodText_()+'\n'
@@ -453,8 +491,175 @@ function tmplZenjitsu_(){
     +buildOutput()
     +'\n\n〇共有事項\n'+plainTextFromEl_('staffShareEdit');
 }
+// ご利用日から7日前の日付を求め、土日にかかる場合は直前の平日(金曜)に繰り上げる。
+// 「ご利用日1週間前(平日)17:00までにご連絡」の締切日算出に使う。GPCMボードと共通仕様。
+function oneWeekBeforeBizDay_(dateStr){
+  if(!dateStr)return '';
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  if(!m)return '';
+  const d=new Date(+m[1],+m[2]-1,+m[3]);
+  d.setDate(d.getDate()-7);
+  const dow=d.getDay();
+  if(dow===0)d.setDate(d.getDate()-2);
+  else if(dow===6)d.setDate(d.getDate()-1);
+  return (d.getMonth()+1)+'/'+d.getDate()+'('+WEEKDAY_JP_[d.getDay()]+')';
+}
+// 「明日」の日付(ボードを開いた日の翌日)。メール返信期限の表示に使う。
+function tomorrowJp_(){
+  const d=new Date();d.setDate(d.getDate()+1);
+  return (d.getMonth()+1)+'月'+d.getDate()+'日（'+WEEKDAY_JP_[d.getDay()]+'）';
+}
+// 予約フロー案内メール(顧客送付用)。①ヒアリングシートから分かる範囲(会社名・担当者・
+// 会場・日時・ケータリング内容)のみ自動反映し、金額欄・オプション一覧などボードの値と
+// 一意に対応しない箇所は当日記入用のプレースホルダのまま残す(依頼原文の文言を維持)。
+function tmplYoyakuFlow_(){
+  const b=activeBlock();
+  const venueName=b.venueName||'';
+  const dateTime=formatDateJp_(q('日付'))+(q('時間')||'〇〇：〇〇～〇〇：〇〇');
+  const cateringKind=q('ケータリング区分');
+  let cateringBlock='';
+  if(cateringKind&&cateringKind!=='なし'){
+    const mealR=parseTimeRangeStr_(q('食事プラン（提供時間帯）'));
+    const drinkR=parseTimeRangeStr_(q('ドリンクタイプ（提供時間帯）'));
+    const mealTimeStr=mealR?(mealR.start+' - '+mealR.end):'';
+    const drinkTimeStr=drinkR?(drinkR.start+' - '+drinkR.end+'(LO：'+subtractMinutes_(drinkR.end,15)+')'):'●●：●● - ●●：●●(LO:15分前)';
+    const drinkType=q('ドリンクタイプ');
+    const drinkLine=/Aプラン/.test(drinkType)?'Aプラン（ビール1杯のみ＋21種類飲み放題）'
+      :/Bプラン/.test(drinkType)?'Bプラン（+550円（ビール含む48種飲み放題））'
+      :'Aプラン（ビール1杯のみ＋21種類飲み放題） or Bプラン（+550円（ビール含む48種飲み放題））';
+    cateringBlock='■ケータリング内容\n想定のプランで記載しておりますが、修正があれば赤字部分の修正をお願いします。\n\n'
+      +'・人数　： '+(q('来場人数')||'')+'名\n'
+      +'・ケータリングお食事プラン：'+(q('食事プラン')||'')+'\n'
+      +'・ドリンクプラン：'+drinkLine+'\n'
+      +'・ドリンクオプション： 乾杯スパークリングワイン：∔550円(税込)/1名 あり or なし\n'
+      +'　　　　　　　　　　　 乾杯シャンパン：+1,100円(税込)/1名 あり or なし\n'
+      +'・お食事提供時間帯：'+mealTimeStr+'\n'
+      +'・飲み放題提供時間帯： '+drinkTimeStr+'\n'
+      +'・ファーストドリンク用意希望：  あり or なし  【ビール 個・ハイボール 個・ウーロン茶 個・ジンジャーエール 個】\n'
+      +'　※乾杯に遅れないよう、開始時間に合わせてバーカウンターへお飲み物をご用意いたします。\n'
+      +'　　特にご指定がない場合は、弊社にて状況を見ながら適宜ご用意させていただきます。\n';
+  }
+  return (q('会社名')||'')+'\n'
+    +(q('担当者')||'')+'様\n\n'
+    +'お世話になっております。\n'
+    +venueName+'を運営しております、株式会社あどばるの'+(q('営業担当')||'')+'でございます。\n\n'
+    +'この度はご予約確定のご連絡をいただき、誠にありがとうございます。\n'
+    +'今後の流れにつきまして、下記の通りご案内いたします。\n\n'
+    +'恐れ入りますが、【１】【２】【３】を【明日'+tomorrowJp_()+'15:00まで】に本メールへご返信・ご登録くださいませ。\n'
+    +'※【３】はお決まりでなければ、決まり次第ご共有をお願い致します。\n'
+    +'--------------------------------------\n'
+    +'【予約内容】\n'
+    +'会場名：'+venueName+'\n'
+    +'日時：'+dateTime+'\n'
+    +'--------------------------------------\n'
+    +'【１】 ビジネスアカウント・TIME SHARINGへの無料会員登録\n\n'
+    +'本予約確定移行につき、下記リンク先より、 弊社公式サイトの無料会員登録をお願いしております。\n'
+    +'👉通常アカウント登録    https://time-sharing.jp/customer/register\n'
+    +'👉法人様（後払いご希望の方）　https://time-sharing.jp/business-account/register\n'
+    +'※法人様の場合も、個人アカウントの登録も同時にしていただく必要があるため、登録画面の上部「新規会員登録」も押した上でご入力をお願いいたします。\n'
+    +'--------------------------------------\n'
+    +'【２】利用規約のご同意\n'
+    +'添付の「'+venueName+'_利用規約」をご確認いただき、\n'
+    +'内容にご同意いただけるかどうかをメールにてご返信ください。\n'
+    +'※書面での申込書をご希望の場合は、その旨お知らせください。\n'
+    +'規約内に記載の「現状確定金額」は下記です。\n'
+    +'■ 現状確定金額\n'
+    +'　　　①飲食プランの最低保証金額： ○○○○円  （税込）\n'
+    +'　　　　※スペース料金・オプションは別\n'
+    +'　　　②スペース料金：○○○○円 ×○○時間⁻3時間無料=○○○○円  （税込）\n'
+    +'　　現状確定請求金額（①＋②）：【○○○○円（税込）】\n\n'
+    +'--------------------------------------\n'
+    +'【３】お支払い方法の確認\n'
+    +'・お支払い方法：①～③からご選択ください。\n'
+    +'①銀行振り込み（決済URL承認後マイページにてダウンロードが可能です。）\n'
+    +'②カード決済（決済URLよりカード情報入力後、承認していただき決済完了となります。）\n'
+    +'③請求書払い（与信審査あり）　※ビジネスアカウント登録者限定\n'
+    +'--------------------------------------\n\n'
+    +'【４】ご利用日1週間前（'+oneWeekBeforeBizDay_(q('日付'))+'17:00）までにご連絡いただく内容\n'
+    +'　※想定でお話ししました内容（見積書URL：'+qmemo('見積送付')+'）をもとに以下に記載しております。\n\n'
+    +cateringBlock+'\n'
+    +'【ドリンク傾向アンケート】\n'
+    +'当日の十分な在庫確保及び品切れ防止のため、回答のご協力をお願いいたします。\n'
+    +'特に「これは多く出そう」と予想されるものを以下よりお選びください。\n'
+    +'（生ビール／ハイボール／サワー／焼酎／カクテル／ワイン／お茶／ジュース）\n'
+    +'※複数回答可\n\n'
+    +'■事例協力について\n'
+    +'弊社では今後のサービス向上や広報活動（ウェブサイト等への掲載）のため、実際の活用シーンをお写真等でご紹介させていただく「事例協力」をお願いしております。\n'
+    +'つきましては、本趣旨にご賛同いただける場合、以下のフォームより同意の可否についてご回答をいただけますでしょうか。\n\n'
+    +'■回答用URL（Google フォーム） https://docs.google.com/forms/d/1du8pOTqgSW_VWrp_0CJYupuxD_GGvIxH25fG5hrXAjA/viewform\n'
+    +'※難しい場合は、協力不可と回答をお願いします。\n\n'
+    +'■当日の流れ・詳細\n\n'
+    +'本番のコンテンツなどの資料・タイムテーブルもご教示ください。\n'
+    +'（例）2026年06月26日(木)17:00～22:00\n'
+    +'＜スケジュールのイメージ＞\n'
+    +'17：00　入室・準備\n'
+    +'17：30　飲み放題開始\n'
+    +'19：15　飲み放題ラストオーダー\n'
+    +'19：30　飲み放題終了・片付け\n'
+    +'20：00　完全退出\n\n'
+    +'■オプション\n'
+    +'↓以下いらないオプション内容の削除をお願いします\n'
+    +'※赤字は想定に入れているオプションです。\n\n'
+    +'※★印の項目は人員に関するオプションです。希望の場合は担当におつなぎしますので、打ち合わせスケジュール日時のご連絡をお願いいたします。\n\n'
+    +'・レイアウト設営変更：33,000円(税込)※弊社でレイアウト設営を行います。飲食パックと併用で御予約の方のみ回復作業は無料で行います。\n'
+    +'・ラクラクパック：66,000円(税込)※レイアウトの回復・ゴミ無料回復・全清掃をするサービスですので、退出時間の削減が可能です！\n'
+    +'・スペース安心補償　　　　 ：8,800円（税込）・9,680円（税込）・10,560円（税込）\n'
+    +'　※安心補償についてはこちらのURLをご確認ください⇒https://time-sharing.jp/lp/compensation\n'
+    +'　※お付けいただいていない場合、トラブルや破損等があった場合は多額請求となる場合がございます。予めご了承ください。\n'
+    +'・控室A：8,800円/1H※最短3時間～\n'
+    +'・控室B：5,500円/1H※最短3時間～\n'
+    +'・喫煙所利用：11,000円(税込)　※電子タバコのみ\n'
+    +'・ フード＆ドリンク持込料  ：55,000円(税込)\n'
+    +'・ゴミ回収：事前申し込み　 ：1,485円(税込)/1袋（税込）\n'
+    +'※物量がわからない場合は当日現金にて当日支払いをお願いします。\n'
+    +'　ラクラクパックご注文の場合は不要です。\n'
+    +'・プロジェクター/スクリーン・モニター 1台利用料  11,000円(税込)\n'
+    +'・プロジェクター/スクリーン・モニター全部利用料 ：33,000円(税込)※会場内モニターにも同時投影可能+4セットすべて利用の場合\n'
+    +'・無線マイク x2本 1セット 5,500円(税込) （最大3セット 6本まで）\n'
+    +'・ピンマイク　5,500円/1台(税込)　(最大2台まで)\n'
+    +'・有線マイク x2本 1セット 5,500円(税込)（最大1セット 2本まで）\n'
+    +'・裏導線・搬入搬出使用料 ：11,000円(税込)\n'
+    +'・ステージ投影カメラ使用料 ：11,000円(税込)\n'
+    +'※会場内モニターにステージを移せるカメラです。 　\n'
+    +'　ステージが見えにくい席の方や人数様が多いご利用時におすすめです。\n'
+    +'・飲食持込時バーカウンターオプション：8,800円/1時間※最短3時間～\n'
+    +'・案内モニター投影：3,300円(税込)\n'
+    +'・クローク札：3,300円(税込)\n'
+    +'★受付スタッフ（1名）：5,500円(税込)/1H※最短3時間～\n'
+    +'★クロークスタッフ（1名）：5,500円(税込)/1H※最短3時間～\n'
+    +'★列作成の誘導スタッフ（1名）：5,500円(税込)/1H※最短3時間～\n'
+    +'★ムービングライト使用料：26,400円(税込)/1回\n'
+    +'※お客様自身で対応者をご手配いただく場合です。  \n'
+    +'★照明スタッフプラン ※ムービングライト利用料込み  \n'
+    +'・3hパック：39,600円(税込)/3h  \n'
+    +'・6hパック：52,800円(税込)/6h \n'
+    +' ・延長：3,300円(税込)/30分 \n'
+    +'★音響 エンジニアプラン\n'
+    +'・3hパック：16,500円(税込)/3h  \n'
+    +'・6hパック：29,700円(税込)/6h \n'
+    +'・延長：3,300円(税込)/30分\n'
+    +'★事前/事後荷物受け取り：9,900円(税込)～\n'
+    +'※※かならずこちらの注意事項内容をご確認下さい→https://drive.google.com/file/d/1iGvtrMVv8JPf52E3naz-E4yDX66AJPHI/view?usp=sharing\n'
+    +'※物量や内容によりお取り置きできかねますので、ご希望の場合は指定時間を確定させていただきます。\n'
+    +'※1週間前の最終確定時に確認できますと幸いです。\n'
+    +'※中身の破損等は責任を負いかねます。予めご了承ください。\n'
+    +'※着払いでのご対応は出来かねますので、元払いでご対応をお願いします。\n\n'
+    +'■レイアウト変更\n'
+    +'事前レイアウト変更をお申込みの場合は 、\n'
+    +'ご利用開始時にご用意する形のレイアウトを作成し、ご返送ください。\n'
+    +'レイアウト変更シートも添付させていただきます。\n\n'
+    +'■搬入・搬出・駐車申請書\n'
+    +'裏導線・搬入搬出の使用料が発生する場合は、搬入申請が必要となります。\n'
+    +'※ご利用の配送業者等の情報をまとめてご記入いただく必要がございます。\n'
+    +'　ご使用の際は、添付のExcelシートを更新のうえ、Excel形式のままご返送をお願いいたします。\n'
+    +'--------------------------------------\n\n'
+    +'長文を失礼いたしました。\n'
+    +'まずは【１】【２】【３】のご対応をお願いいたします。\n\n'
+    +'ご不明点がございましたらお気軽にご連絡くださいませ。\n'
+    +'引き続きよろしくお願い申し上げます。';
+}
 function doExportTmpl(kind){
-  const fn=kind==='houkoku'?tmplHoukoku_:kind==='isshukan'?tmplIsshukan_:tmplZenjitsu_;
+  const fn=kind==='houkoku'?tmplHoukoku_:kind==='isshukan'?tmplIsshukan_:kind==='yoyakuflow'?tmplYoyakuFlow_:tmplZenjitsu_;
   document.getElementById('outText').value=fn();
 }
 function copyOut(){const t=document.getElementById('outText');t.select();try{document.execCommand('copy');}catch(e){}}
@@ -474,11 +679,11 @@ function setNextLayoutEnabled(val){activeBlock().layoutNextEnabled=(val==='あ�
 function renderLayout(){
   const b=activeBlock();const imgs=b.layoutImgs||{};const memo=b.layoutMemo||{};const nextOn=!!b.layoutNextEnabled;
   document.getElementById('layout').innerHTML=`<div class="banner">レイアウト図（会場：<b>${esc(b.venueName||'(会場未入力)')}</b>）。ファイルから直接アップロード。アップロードした画像は利用確認書PDFにも反映されます。</div>
-  <div class="layoutbox"><div style="font-weight:800;color:#fff;margin-bottom:4px">当日レイアウト</div>
+  <div class="layoutbox"><div style="font-weight:800;color:#1e293b;margin-bottom:4px">当日レイアウト</div>
     <div class="uploadbar"><label class="filebtn">📁 ファイルを選択<input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp" onchange="previewImg(this,'day')"></label><button class="clearbtn" onclick="clearImg('day')">クリア</button><span id="day-name" style="font-size:11px;color:#94a3b8">${esc(imgs.day?imgs.day.name:'')}</span></div>
     <div id="day-preview" class="imgslot">${imgs.day?'<img src="'+imgs.day.data+'">':'ファイルを選択してください'}</div>
     <div style="margin-top:10px"><label class="inl" style="margin-bottom:4px">画像メモ</label><textarea placeholder="レイアウト補足…" oninput="setLayoutMemo('day',this.value)">${esc(memo.day||'')}</textarea></div></div>
-  <div class="layoutbox"><div style="font-weight:800;color:#fff;margin-bottom:4px">次回レイアウト作成 <select style="margin-left:8px" onchange="setNextLayoutEnabled(this.value)"><option ${!nextOn?'selected':''}>なし</option><option ${nextOn?'selected':''}>あり</option></select></div>
+  <div class="layoutbox"><div style="font-weight:800;color:#1e293b;margin-bottom:4px">次回レイアウト作成 <select style="margin-left:8px" onchange="setNextLayoutEnabled(this.value)"><option ${!nextOn?'selected':''}>なし</option><option ${nextOn?'selected':''}>あり</option></select></div>
     <div class="uploadbar"><label class="filebtn">📁 ファイルを選択<input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp" onchange="previewImg(this,'next')"></label><button class="clearbtn" onclick="clearImg('next')">クリア</button><span id="next-name" style="font-size:11px;color:#94a3b8">${esc(imgs.next?imgs.next.name:'')}</span></div>
     <div id="next-preview" class="imgslot">${imgs.next?'<img src="'+imgs.next.data+'">':'ファイルを選択してください'}</div>
     <div style="margin-top:10px"><label class="inl" style="margin-bottom:4px">画像メモ（次回）</label><textarea placeholder="次回レイアウト備考…" oninput="setLayoutMemo('next',this.value)">${esc(memo.next||'')}</textarea></div>
@@ -502,7 +707,7 @@ function makeLayoutPdf(){
   const d=collectLayoutPdfPayload_();
   if(box)box.textContent='作成中…';
   google.script.run.withSuccessHandler(function(r){
-      if(box)box.innerHTML='作成しました：<a href="'+r.fileUrl+'" target="_blank" style="color:#60a5fa">'+esc(r.fileName)+'</a>';
+      if(box)box.innerHTML='作成しました：<a href="'+r.fileUrl+'" target="_blank" style="color:#2563eb">'+esc(r.fileName)+'</a>';
       window.open(r.fileUrl,'_blank');
     })
     .withFailureHandler(function(e){ if(box)box.textContent='PDF作成エラー: '+e; })
@@ -555,7 +760,7 @@ function renderHearingFreeOptions_(){
   tbody.innerHTML=free.map((o,i)=>`<tr>
     <td><input type="text" class="hf-name" data-idx="${i}" value="${esc(o.name)}" style="width:100%" placeholder="品目名（例：ムービングライト）"></td>
     <td style="width:110px"><select class="hf-enabled" data-idx="${i}"><option ${!freeFeeOn_(o)?'selected':''}>なし</option><option ${freeFeeOn_(o)?'selected':''}>あり</option></select></td>
-    <td style="width:26px"><button type="button" class="hf-del" data-idx="${i}" title="この行を削除" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:14px">×</button></td>
+    <td style="width:26px"><button type="button" class="hf-del" data-idx="${i}" title="この行を削除" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px">×</button></td>
   </tr>`).join('');
   const cnt=document.getElementById('hearingFreeCount'); if(cnt)cnt.textContent='（'+free.length+'件）';
   tbody.querySelectorAll('.hf-name').forEach(el=>el.oninput=()=>{free[+el.dataset.idx].name=el.value;});
@@ -589,15 +794,15 @@ function renderConfirmation(){
     <td style="width:110px"><input type="number" class="free-price" data-idx="${o._i}" value="${o.price===''||o.price==null?'':esc(o.price)}" style="width:100%;text-align:right" placeholder="単価"></td>
     <td style="width:80px"><input type="number" class="free-qty" data-idx="${o._i}" value="${o.qty===''||o.qty==null?'':esc(o.qty)}" style="width:100%;text-align:right" placeholder="数量"></td>
     <td style="width:78px"><select class="free-tax" data-idx="${o._i}"><option ${o.taxType!=='税込'?'selected':''}>税別</option><option ${o.taxType==='税込'?'selected':''}>税込</option></select></td>
-    <td style="width:26px"><button type="button" class="free-del" data-idx="${o._i}" title="この行を削除" style="background:none;border:none;color:#fca5a5;cursor:pointer;font-size:14px">×</button></td>
+    <td style="width:26px"><button type="button" class="free-del" data-idx="${o._i}" title="この行を削除" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px">×</button></td>
   </tr>`).join('');
   const maintFee=computeMaintenanceFee_(b);
   const cf=ensureConf_(b);
   document.getElementById('confirmation').innerHTML=`
   <div class="banner">利用確認書（会場：<b>${esc(b.venueName||'(会場未入力)')}</b>${b.venueAddress?'　'+esc(b.venueAddress):''}）。</div>
   <div class="cfg"><h3>ヘッダ・ご利用内容</h3><div class="grid2">
-    <label class="inl">立会担当 <input id="confAttendant" type="text" value="${esc(cf.attendant)}" style="flex:1;min-width:200px"></label><label class="inl">営業担当（①ヒアリングシートから自動反映） <input id="confSalesRep" type="text" value="${esc(q('営業担当')||'')}" readonly style="flex:1;min-width:200px;background:#0e1626;color:#94a3b8;cursor:not-allowed"></label>
-    <label class="inl">利用日（①ヒアリングシートから自動反映） <input id="confUseDate" type="text" value="${esc(q('日付')||'')}" readonly style="background:#0e1626;color:#94a3b8;cursor:not-allowed"></label><label class="inl">利用時間（①ヒアリングシートから自動反映） <input id="confUseTime" type="text" value="${esc(q('時間')||'')}" readonly style="background:#0e1626;color:#94a3b8;cursor:not-allowed"></label></div></div>
+    <label class="inl">立会担当 <input id="confAttendant" type="text" value="${esc(cf.attendant)}" style="flex:1;min-width:200px"></label><label class="inl">営業担当（①ヒアリングシートから自動反映） <input id="confSalesRep" type="text" value="${esc(q('営業担当')||'')}" readonly style="flex:1;min-width:200px;background:#f1f5f9;color:#64748b;cursor:not-allowed"></label>
+    <label class="inl">利用日（①ヒアリングシートから自動反映） <input id="confUseDate" type="text" value="${esc(q('日付')||'')}" readonly style="background:#f1f5f9;color:#64748b;cursor:not-allowed"></label><label class="inl">利用時間（①ヒアリングシートから自動反映） <input id="confUseTime" type="text" value="${esc(q('時間')||'')}" readonly style="background:#f1f5f9;color:#64748b;cursor:not-allowed"></label></div></div>
   <div class="cfg"><h3>ご成約内容サマリー（テキスト出力を反映・編集可／太字・文字色を選択して変更可）</h3>
     <div class="richbar">${richToolbarHtml()}
       <button class="toolbtn" onclick="document.getElementById('seiyakuSummary').textContent=buildOutput()">🔄 テキスト出力を反映</button>
@@ -608,7 +813,7 @@ function renderConfirmation(){
     <div id="staffShareEdit" class="richedit" contenteditable="true" style="min-height:200px">${esc(STAFF_TEMPLATE)}</div></div>
   <div class="cfg"><h3>◆標準オプション（全会場共通）</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">スペース延長系は単価未確定(当日手入力)。ゴミ処理・飲み放題の単価はこの案件限定で編集できます（共通マスタ本体は変更されません）。数量・税抜合計は当日記入。</div>
     <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税抜合計</th></tr></thead><tbody id="stdFeeTbody">${stdRows||'<tr><td colspan="4" style="text-align:center;color:#64748b">共通オプション・料金マスタが未取得です</td></tr>'}</tbody></table>
-    <div style="font-size:11px;color:#93c5fd;margin-top:8px;padding:8px 10px;background:#0e1626;border:1px solid #334155;border-radius:8px">◆維持管理費（税込・自動計算） ＝ 標準+自由記述オプションの税抜合計 × 5% ＝ <b id="maintFeeText" style="color:#fff">¥${maintFee.toLocaleString()}</b></div></div>
+    <div style="font-size:11px;color:#1d4ed8;margin-top:8px;padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px">◆維持管理費（税込・自動計算） ＝ 標準+自由記述オプションの税抜合計 × 5% ＝ <b id="maintFeeText" style="color:#0f172a">¥${maintFee.toLocaleString()}</b></div></div>
   <div class="cfg"><h3>◆その他オプション（自由記述）</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">①ヒアリングシートの「会場固有オプション」で「あり」にした項目がここに表示されます。単価・数量はここで入力してください。ここで直接追加した品目は自動的に「あり」扱いになります。</div>
     <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税表記</th><th></th></tr></thead><tbody id="freeFeeTbody">${freeRows||'<tr><td colspan="5" style="text-align:center;color:#64748b">「あり」の会場固有オプションはありません</td></tr>'}</tbody></table>
     <button type="button" class="toolbtn sec" onclick="addFreeFeeRow()" style="margin-top:8px">＋ 品目を追加</button></div>
@@ -617,13 +822,13 @@ function renderConfirmation(){
     <label class="inl">(A)事前確定分未精算額 <input id="confBalance" type="text" value="${esc(cf.balance)}" placeholder="数字のみ入力"></label><label class="inl">支払期限 <input id="confPayDue" type="date" value="${esc(cf.payDue)}"></label>
     <label class="inl">事前確定分の支払方法 <select id="prePay" onchange="updatePayNote()">${payOptHtml(PAY_PRE,cf.prePayMethod)}</select></label>
     <label class="inl">追加分の支払方法 <select id="addPay" onchange="updatePayNote()">${payOptHtml(PAY_ADD,cf.addPayMethod)}</select></label></div>
-    <div style="margin-top:10px"><div style="font-size:11px;font-weight:700;color:#93c5fd;margin-bottom:4px">お支払いに関するご案内（支払方法により自動切替）</div>
-    <div id="payNote" style="white-space:pre-wrap;background:#0e1626;border:1px solid #334155;border-radius:8px;padding:8px 10px;font-size:12px;color:#cbd5e1"></div></div></div>
+    <div style="margin-top:10px"><div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:4px">お支払いに関するご案内（支払方法により自動切替）</div>
+    <div id="payNote" style="white-space:pre-wrap;background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:12px;color:#334155"></div></div></div>
   <div class="cfg"><h3>◆領収書</h3><div class="grid2">
     <label class="inl">宛名 <input id="confReceiptName" type="text" value="${esc(cf.receiptName)}" placeholder="株式会社〇〇 御中 など" style="flex:1;min-width:260px"></label>
     <label class="inl">送付先 <input id="confReceiptAddress" type="text" value="${esc(cf.receiptAddress)}" placeholder="郵送が必要な場合のみ入力" style="flex:1;min-width:260px"></label></div>
-    <div style="font-size:11px;color:#f0b866;margin-top:8px;padding:8px 10px;background:#1a140b;border:1px solid #7a5a1e;border-radius:8px">※恐れ入りますが、領収書の宛名を「上様」とすることはご遠慮いただいております。<br>※発行後の領収書を分割してのご発行も承っておりませんので、あらかじめご了承ください。</div></div>
-  <div class="sign"><div class="st">担当者確認欄（サイン用のみ）</div><div style="font-size:12px;color:#cbd5e1">ご利用ありがとうございます。上記内容に間違いがなければ、ご署名ください。</div>
+    <div style="font-size:11px;color:#92400e;margin-top:8px;padding:8px 10px;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px">※恐れ入りますが、領収書の宛名を「上様」とすることはご遠慮いただいております。<br>※発行後の領収書を分割してのご発行も承っておりませんので、あらかじめご了承ください。</div></div>
+  <div class="sign"><div class="st">担当者確認欄（サイン用のみ）</div><div style="font-size:12px;color:#334155">ご利用ありがとうございます。上記内容に間違いがなければ、ご署名ください。</div>
     <div class="chk">当日精算分の領収書は<label class="inl"><input type="checkbox">当日お渡し済</label><label class="inl"><input type="checkbox">後日PDF送付</label><label class="inl"><input type="checkbox">希望なし・当日精算なし</label></div>
     <div style="font-size:11px;color:#94a3b8">署名</div><div class="sign-line"></div></div>
   <div class="cfg"><h3>◆利用確認書PDF作成</h3>
@@ -693,7 +898,7 @@ function makeConfPdf(variant){
   const box=document.getElementById('pdfResult');
   if(box)box.textContent='作成中…';
   google.script.run.withSuccessHandler(function(r){
-      if(box)box.innerHTML='作成しました：<a href="'+r.fileUrl+'" target="_blank" style="color:#60a5fa">'+esc(r.fileName)+'</a>';
+      if(box)box.innerHTML='作成しました：<a href="'+r.fileUrl+'" target="_blank" style="color:#2563eb">'+esc(r.fileName)+'</a>';
       window.open(r.fileUrl,'_blank');
     })
     .withFailureHandler(function(e){ if(box)box.textContent='PDF作成エラー: '+e; })
