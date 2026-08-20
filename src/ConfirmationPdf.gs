@@ -181,6 +181,19 @@ function confComputeMaintenanceFee_(standardFees, freeFees) {
   return Math.round(subtotal * rate / 100);
 }
 
+/** 維持管理費(5%)算出前の、標準+自由記述オプションの単純合計(税抜・税込問わず)。 */
+function confComputeFeeSubtotal_(standardFees, freeFees) {
+  var subtotal = 0;
+  (standardFees || []).forEach(function (o) {
+    if (o.code === 'MAINT' || o.kind === 'percentage') return;
+    subtotal += om_num_(o.price) * (om_num_(o.qty) || 0);
+  });
+  (freeFees || []).forEach(function (o) {
+    subtotal += om_num_(o.price) * (om_num_(o.qty) || 0);
+  });
+  return subtotal;
+}
+
 /** 利用確認書HTMLをサーバー描画（variant: 'staff' | 'sign'）。会場は自由入力のため住所も表示する。 */
 function renderConfirmationHtml_(variant, d, venue) {
   var isStaff = (variant !== 'sign');
@@ -192,6 +205,7 @@ function renderConfirmationHtml_(variant, d, venue) {
   var stdRows = standardFees.filter(function (o) { return o.code !== 'MAINT' && o.kind !== 'percentage'; }).map(confFeeRowHtml_).join('');
   var freeRows = freeFees.map(confFeeRowHtml_).join('');
   var maintFee = (d.maintenanceFee != null && d.maintenanceFee !== '') ? Number(d.maintenanceFee) : confComputeMaintenanceFee_(standardFees, freeFees);
+  var feeSubtotal = confComputeFeeSubtotal_(standardFees, freeFees);
 
   var payNote = confPayNote_(d.prePayMethod);
   var addNote = confPayNote_(d.addPayMethod);
@@ -216,10 +230,12 @@ function renderConfirmationHtml_(variant, d, venue) {
 
   // 領収書欄はお客様控(サイン用)にのみ必要な情報のため、担当者確認欄と同様
   // サイン用限定・同系統の枠囲みで表示し、見た目でも区別できるようにする。
+  // 宛名・送付先が未入力の場合は当日その場で手書きできるよう、欄に十分な高さを確保する。
   var receiptBlock = !isStaff
     ? '<div class="sec receipt">◆領収書</div>' +
-      '<div class="receipt-box"><table>' +
-        '<tr><th class="k">宛名</th><td>' + ce_(d.receiptName || '') + '</td><th class="k">送付先</th><td>' + ce_(d.receiptAddress || '') + '</td></tr></table>' +
+      '<div class="receipt-box"><table class="receipt-table">' +
+        '<tr><th class="k">宛名</th><td>' + ce_(d.receiptName || '') + '</td></tr>' +
+        '<tr><th class="k">送付先</th><td>' + ce_(d.receiptAddress || '') + '</td></tr></table>' +
       '<div style="font-size:10px;color:#7a4a12;margin-top:6px">※恐れ入りますが、領収書の宛名を「上様」とすることはご遠慮いただいております。<br>※発行後の領収書を分割してのご発行も承っておりませんので、あらかじめご了承ください。</div></div>'
     : '';
 
@@ -231,6 +247,7 @@ function renderConfirmationHtml_(variant, d, venue) {
     ".doc-meta{font-size:9.5px;text-align:right;color:#444;}" +
     ".sec{background:#1a2b4a;color:#fff;font-size:10px;font-weight:bold;padding:2.5px 8px;margin:5px 0 2px;page-break-after:avoid;}.sec.sign{background:#0e7a5f;}.sec.receipt{background:#9a6a1e;}" +
     ".receipt-box{border:2px solid #9a6a1e;padding:6px 9px;margin-top:2px;page-break-inside:avoid;}" +
+    ".receipt-table td{height:15mm;vertical-align:top;font-size:11px;}" +
     "table{width:100%;border-collapse:collapse;font-size:9px;margin-bottom:2px;}" +
     "tr{page-break-inside:avoid;}" +
     "th,td{border:1px solid #b0b6bf;padding:1.5px 5px;vertical-align:top;}th{background:#e8ecf2;font-weight:bold;}th.k{width:110px;}" +
@@ -266,11 +283,12 @@ function renderConfirmationHtml_(variant, d, venue) {
     '<div class="maintnote">◆維持管理費（税込・自動計算）：標準オプション＋自由記述オプションの税抜合計×5% ＝ <b>¥' + maintFee.toLocaleString() + '</b></div>' +
     '<div class="sec">◆その他オプション（自由記述）</div>' +
     '<table class="fee"><thead><tr><th>品目</th><th style="width:100px">単価</th><th style="width:70px">数量</th><th style="width:70px">税表記</th></tr></thead><tbody>' + (freeRows || '<tr><td colspan="4" style="text-align:center;color:#888">なし</td></tr>') + '</tbody></table>' +
+    '<div class="maintnote">◆追加料金 合計金額（標準+自由記述オプション・税抜） ＝ <b>¥' + feeSubtotal.toLocaleString() + '</b></div>' +
     '<div class="sec">◆お支払い状況</div><table>' +
       '<tr><th class="k">事前確定金額</th><td>' + money_(d.preConfirmed) + '</td><th class="k">事前支払額</th><td>' + money_(d.prePaid) + '</td></tr>' +
       '<tr><th class="k">(A)未精算額</th><td>' + money_(d.balance) + '</td><th class="k">支払期限</th><td>' + ce_(d.payDue || '') + '</td></tr>' +
       '<tr><th class="k">事前確定分 支払方法</th><td>' + ce_(d.prePayMethod || '') + '</td><th class="k">追加分 支払方法</th><td>' + ce_(d.addPayMethod || '') + '</td></tr></table>' +
-    '<div class="paynote">■ お支払いに関するご案内\n' + ce_(payNote) + '</div>' +
+    (isStaff ? '<div class="paynote">■ お支払いに関するご案内(スタッフ用のみ)\n' + ce_(payNote) + '</div>' : '') +
     receiptBlock +
     signBlock +
     '<div class="foot">本書はTSCM管理ボードの入力内容をもとに自動生成されました（' +

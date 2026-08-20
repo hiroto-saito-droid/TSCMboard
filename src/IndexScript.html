@@ -4,6 +4,10 @@ let FAVORITE_VENUES=[];    // apiGetFavoriteVenues()
 let HEARING=[];            // apiGetFormSchema()（会場非依存・単一マスタ）
 let STAFF_TEMPLATE='';     // apiGetStaffTemplate()
 const esc=s=>(s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function withSama(v){return v&&!/様$/.test(v)?v+'様':v;}
+function withN(v){return v&&!/名$/.test(v)?v+'名':v;}
+// ①ヒアリングシート上で、入力欄の右に単位・敬称を表示する項目(欄自体には含めない)。
+const SUFFIX_LABEL={'担当者':'様','来場人数':'名'};
 const CAT_PALETTE=['#2563eb','#db2777','#059669','#d97706','#7c3aed','#0891b2','#be123c','#4d7c0f'];
 function catColor(idx){return CAT_PALETTE[idx%CAT_PALETTE.length];}
 let state={blocks:[{id:1,venueName:'',venueAddress:'',snap:null}],active:1,seq:1};
@@ -288,8 +292,9 @@ function renderHearing(){
     const rows=sec.items.map(it=>{
       const rowcls='row'+(it.catering?' catering-detail':'');
       const memo=(it.memo||'').split('\n')[0];
+      const suffix=SUFFIX_LABEL[it.item]?`<span style="font-weight:700;color:#334155">${SUFFIX_LABEL[it.item]}</span>`:'';
       return `<div class="${rowcls}"><div class="lbl">${esc(it.item)}</div>
-        <div class="field"><div class="ctl">${ctl(it)}</div>
+        <div class="field"><div class="ctl">${ctl(it)}${suffix}</div>
         <input class="memo" type="text" value="${esc(memo)}" placeholder="備考メモ (任意)"></div></div>`;
     }).join('');
     // METAカテゴリ(顧客情報)には、上部の会場バーで入力した会場名を常に表示し、
@@ -360,7 +365,7 @@ function buildOutput(){
   L.push('会場：'+(b.venueName||''));
   if(b.venueAddress)L.push('会場住所：'+b.venueAddress);
   L.push('会社名：'+q('会社名'));
-  L.push('担当者：'+q('担当者'));
+  L.push('担当者：'+withSama(q('担当者')));
   const d=q('日付'),tm=q('時間');
   L.push('ご予約日時：'+d+(tm?' '+tm:''));
   const headcount=q('来場人数');
@@ -467,6 +472,7 @@ function tmplIsshukan_(){
     +'〇予約管理URL：'+(q('予約管理URL')||'')+'\n'
     +'〇予約管理番号：'+(q('予約管理番号')||'')+'\n'
     +'〇見積書URL：'+(qmemo('見積送付')||'')+'\n'
+    +'〇ボードURL：'+(currentCaseId?(WEBAPP_BASE_URL+'?case='+encodeURIComponent(currentCaseId)):'（未保存のため未発行・先に保存してください）')+'\n'
     +'〇スペース名：'+(b.venueName||'')+'\n'
     +'〇利用日時：'+dateTime+'\n'
     +'〇人数　： '+(q('来場人数')||'')+'名\n'
@@ -793,6 +799,16 @@ function renderHearingFreeOptions_(){
   tbody.querySelectorAll('.hf-enabled').forEach(el=>el.onchange=()=>{free[+el.dataset.idx].enabled=(el.value==='あり');renderConfirmation();});
   tbody.querySelectorAll('.hf-del').forEach(el=>el.onclick=()=>{free.splice(+el.dataset.idx,1);renderHearingFreeOptions_();renderConfirmation();});
 }
+// 標準+自由記述オプション(維持管理費算出用の行を除く)の単価×数量の単純合計。
+// 維持管理費(5%)とは別に、追加料金全体の合計金額を確認できるようにする。
+function computeFeeSubtotal_(b){
+  const std=ensureStandardFees_(b).filter(o=>o.code!=='MAINT'&&o.kind!=='percentage');
+  const free=ensureFreeFees_(b).filter(freeFeeOn_);
+  let total=0;
+  std.forEach(o=>{total+=toNum_(o.price)*toNum_(o.qty);});
+  free.forEach(o=>{total+=toNum_(o.price)*toNum_(o.qty);});
+  return total;
+}
 function refreshMaintFee_(){
   const b=activeBlock();
   const std=ensureStandardFees_(b).filter(o=>o.code!=='MAINT'&&o.kind!=='percentage');
@@ -801,6 +817,7 @@ function refreshMaintFee_(){
     cell.textContent=(o.price!==''&&o.price!=null&&o.qty!==''&&o.qty!=null)?('¥'+(toNum_(o.price)*toNum_(o.qty)).toLocaleString()):'';
   });
   const t=document.getElementById('maintFeeText'); if(t)t.textContent='¥'+computeMaintenanceFee_(b).toLocaleString();
+  const st=document.getElementById('feeSubtotalText'); if(st)st.textContent='¥'+computeFeeSubtotal_(b).toLocaleString();
 }
 function renderConfirmation(){
   const b=activeBlock();
@@ -842,10 +859,11 @@ function renderConfirmation(){
     <div style="font-size:11px;color:#1d4ed8;margin-top:8px;padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px">◆維持管理費（税込・自動計算） ＝ 標準+自由記述オプションの税抜合計 × 5% ＝ <b id="maintFeeText" style="color:#0f172a">¥${maintFee.toLocaleString()}</b></div></div>
   <div class="cfg"><h3>◆その他オプション（自由記述）</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">①ヒアリングシートの「会場固有オプション」で「あり」にした項目がここに表示されます。単価・数量はここで入力してください。ここで直接追加した品目は自動的に「あり」扱いになります。</div>
     <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税表記</th><th></th></tr></thead><tbody id="freeFeeTbody">${freeRows||'<tr><td colspan="5" style="text-align:center;color:#64748b">「あり」の会場固有オプションはありません</td></tr>'}</tbody></table>
+    <div style="font-size:11px;color:#334155;margin-top:8px;padding:8px 10px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;font-weight:700">◆追加料金 合計金額（標準+自由記述オプション・税抜） ＝ <b id="feeSubtotalText">¥${computeFeeSubtotal_(b).toLocaleString()}</b></div>
     <button type="button" class="toolbtn sec" onclick="addFreeFeeRow()" style="margin-top:8px">＋ 品目を追加</button></div>
   <div class="cfg"><h3>◆お支払い状況</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">事前確定金額・事前支払額・未精算額は数字だけ入力すればPDF上で¥表記になります。</div><div class="grid2">
-    <label class="inl">事前確定金額 <input id="confPreConfirmed" type="text" value="${esc(cf.preConfirmed)}" placeholder="数字のみ入力"></label><label class="inl">事前支払額 <input id="confPrePaid" type="text" value="${esc(cf.prePaid)}" placeholder="数字のみ入力"></label>
-    <label class="inl">(A)事前確定分未精算額 <input id="confBalance" type="text" value="${esc(cf.balance)}" placeholder="数字のみ入力"></label><label class="inl">支払期限 <input id="confPayDue" type="date" value="${esc(cf.payDue)}"></label>
+    <label class="inl">事前確定金額 ￥<input id="confPreConfirmed" type="text" value="${esc(cf.preConfirmed)}" placeholder="数字のみ入力"></label><label class="inl">事前支払額 ￥<input id="confPrePaid" type="text" value="${esc(cf.prePaid)}" placeholder="数字のみ入力"></label>
+    <label class="inl">(A)事前確定分未精算額 ￥<input id="confBalance" type="text" value="${esc(cf.balance)}" placeholder="数字のみ入力"></label><label class="inl">支払期限 <input id="confPayDue" type="date" value="${esc(cf.payDue)}"></label>
     <label class="inl">事前確定分の支払方法 <select id="prePay" onchange="updatePayNote()">${payOptHtml(PAY_PRE,cf.prePayMethod)}</select></label>
     <label class="inl">追加分の支払方法 <select id="addPay" onchange="updatePayNote()">${payOptHtml(PAY_ADD,cf.addPayMethod)}</select></label></div>
     <div style="margin-top:10px"><div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:4px">お支払いに関するご案内（支払方法により自動切替）</div>
@@ -910,14 +928,28 @@ function applyRichColor_(color){
   sel.removeAllRanges();
   syncRichEdit_(span.closest('.richedit'));
 }
+// 本予約サマリー(buildOutput())のうち、指定した【見出し】区分の行だけを抜き出す。
+// サイン用(お客様控)は、ご成約内容サマリーを丸ごと載せず【設備】【ケータリング詳細】
+// 【会場固有オプション】のみに絞り込むために使う。
+function extractSummarySections_(sections){
+  const lines=buildOutput().split('\n');
+  const keep=[];let active=false;
+  lines.forEach(line=>{
+    const m=line.match(/^【(.+)】$/);
+    if(m){active=sections.indexOf(m[1])>-1;if(active)keep.push(line);return;}
+    if(active)keep.push(line);
+  });
+  return keep.join('\n').trim();
+}
 function collectConfPayload_(variant){
   const b=activeBlock();
   const cf=ensureConf_(b);
+  const signSummary=variant==='sign'?esc(extractSummarySections_(['設備','ケータリング詳細','会場固有オプション'])):'';
   return {variant:variant,venueName:b.venueName||'',venueAddress:b.venueAddress||'',
     salesRep:q('営業担当'),attendant:cf.attendant,
     company:q('会社名'),client:q('担当者'),site:q('予約サイト'),
-    useDate:q('日付'),useTime:q('時間'),headcount:q('来場人数'),
-    summaryHtml:document.getElementById('seiyakuSummary').innerHTML,
+    useDate:q('日付'),useTime:q('時間'),headcount:withN(q('来場人数')),
+    summaryHtml:variant==='sign'?signSummary:document.getElementById('seiyakuSummary').innerHTML,
     staffShareHtml:document.getElementById('staffShareEdit').innerHTML,
     standardFees:ensureStandardFees_(b),freeFees:ensureFreeFees_(b).filter(freeFeeOn_),
     maintenanceFee:computeMaintenanceFee_(b),
