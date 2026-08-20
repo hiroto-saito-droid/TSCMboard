@@ -235,7 +235,7 @@ function renderConfirmationHtml_(variant, d, venue) {
     ? '<div class="sec receipt">◆領収書</div>' +
       '<div class="receipt-box"><table class="receipt-table">' +
         '<tr><th class="k">宛名</th><td>' + ce_(d.receiptName || '') + '</td></tr>' +
-        '<tr><th class="k">送付先</th><td>' + ce_(d.receiptAddress || '') + '</td></tr></table>' +
+        '<tr><th class="k">送付先</th><td class="addr">' + ce_(d.receiptAddress || '') + '</td></tr></table>' +
       '<div style="font-size:10px;color:#7a4a12;margin-top:6px">※恐れ入りますが、領収書の宛名を「上様」とすることはご遠慮いただいております。<br>※発行後の領収書を分割してのご発行も承っておりませんので、あらかじめご了承ください。</div></div>'
     : '';
 
@@ -247,7 +247,7 @@ function renderConfirmationHtml_(variant, d, venue) {
     ".doc-meta{font-size:9.5px;text-align:right;color:#444;}" +
     ".sec{background:#1a2b4a;color:#fff;font-size:10px;font-weight:bold;padding:2.5px 8px;margin:5px 0 2px;page-break-after:avoid;}.sec.sign{background:#0e7a5f;}.sec.receipt{background:#9a6a1e;}" +
     ".receipt-box{border:2px solid #9a6a1e;padding:6px 9px;margin-top:2px;page-break-inside:avoid;}" +
-    ".receipt-table td{height:15mm;vertical-align:top;font-size:11px;}" +
+    ".receipt-table td{height:15mm;vertical-align:top;font-size:11px;}.receipt-table td.addr{height:8mm;}" +
     "table{width:100%;border-collapse:collapse;font-size:9px;margin-bottom:2px;}" +
     "tr{page-break-inside:avoid;}" +
     "th,td{border:1px solid #b0b6bf;padding:1.5px 5px;vertical-align:top;}th{background:#e8ecf2;font-weight:bold;}th.k{width:110px;}" +
