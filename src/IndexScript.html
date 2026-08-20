@@ -666,7 +666,20 @@ function doExportTmpl(kind){
   const fn=kind==='houkoku'?tmplHoukoku_:kind==='isshukan'?tmplIsshukan_:kind==='yoyakuflow'?tmplYoyakuFlow_:tmplZenjitsu_;
   document.getElementById('outText').value=fn();
 }
-function copyOut(){const t=document.getElementById('outText');t.select();try{document.execCommand('copy');}catch(e){}}
+// LINE等の一部アプリはコピー元がLF(\n)のみだと改行のたびに空行が入って
+// 表示されることがあるため、クリップボードにはCRLF(\r\n)に正規化して渡す
+// (画面上のテキストエリア自体はLFのままで見た目に影響しない)。
+function copyOut(){
+  const t=document.getElementById('outText');
+  const norm=t.value.replace(/\r\n/g,'\n').replace(/\n/g,'\r\n');
+  const tmp=document.createElement('textarea');
+  tmp.value=norm;
+  tmp.style.position='fixed';tmp.style.left='-9999px';
+  document.body.appendChild(tmp);
+  tmp.select();
+  try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(tmp);
+}
 function previewImg(input,key){
   const f=input.files&&input.files[0];const box=document.getElementById(key+'-preview');const nm=document.getElementById(key+'-name');if(!f)return;
   const rd=new FileReader();rd.onload=e=>{
@@ -732,9 +745,18 @@ const payOptHtml=(a,sel)=>a.map(o=>`<option ${o===sel?'selected':''}>${o}</optio
 // のあり/なし切替等)にvalue=""へ戻ってしまい入力内容がPDFへ反映されないバグがあったため、
 // ブロックごとの状態(b.conf)に保持し、再描画のたびに復元する方式に変更した。
 function ensureConf_(b){
-  if(!b.conf)b.conf={attendant:'',preConfirmed:'',prePaid:'',balance:'',payDue:'',prePayMethod:'',addPayMethod:'',receiptName:'',receiptAddress:''};
+  if(!b.conf)b.conf={attendant:'',preConfirmed:'',prePaid:'',balance:'',payDue:'',prePayMethod:'',addPayMethod:'',receiptName:'',receiptAddress:'',summaryHtml:null,staffHtml:null};
   return b.conf;
 }
+// ご成約内容サマリー／立会スタッフ共有事項の編集内容をブロックごとに保持する
+// (renderConfirmation()が再実行されても編集内容を保持したまま)。
+function syncRichEdit_(el){
+  if(!el)return;
+  const cf=ensureConf_(activeBlock());
+  if(el.id==='seiyakuSummary')cf.summaryHtml=el.innerHTML;
+  else if(el.id==='staffShareEdit')cf.staffHtml=el.innerHTML;
+}
+function refreshSeiyakuSummary_(){const el=document.getElementById('seiyakuSummary');if(!el)return;el.textContent=buildOutput();syncRichEdit_(el);}
 function toNum_(v){const n=Number(v);return isNaN(n)?0:n;}
 function ensureStandardFees_(b){
   if(!b.standardFees){
@@ -809,12 +831,12 @@ function renderConfirmation(){
     <label class="inl">利用日（①ヒアリングシートから自動反映） <input id="confUseDate" type="text" value="${esc(q('日付')||'')}" readonly style="background:#f1f5f9;color:#64748b;cursor:not-allowed"></label><label class="inl">利用時間（①ヒアリングシートから自動反映） <input id="confUseTime" type="text" value="${esc(q('時間')||'')}" readonly style="background:#f1f5f9;color:#64748b;cursor:not-allowed"></label></div></div>
   <div class="cfg"><h3>ご成約内容サマリー（テキスト出力を反映・編集可／太字・文字色を選択して変更可）</h3>
     <div class="richbar">${richToolbarHtml()}
-      <button class="toolbtn" onclick="document.getElementById('seiyakuSummary').textContent=buildOutput()">🔄 テキスト出力を反映</button>
+      <button class="toolbtn" onclick="refreshSeiyakuSummary_()">🔄 テキスト出力を反映</button>
     </div>
-    <div id="seiyakuSummary" class="richedit" contenteditable="true" style="min-height:220px"></div></div>
+    <div id="seiyakuSummary" class="richedit" contenteditable="true" style="min-height:220px">${cf.summaryHtml!=null?cf.summaryHtml:''}</div></div>
   <div class="cfg"><h3>◆立会スタッフ共有事項（スタッフ用のみ・編集可／共有事項テンプレ／太字・文字色を選択して変更可）</h3>
     <div class="richbar">${richToolbarHtml()}</div>
-    <div id="staffShareEdit" class="richedit" contenteditable="true" style="min-height:200px">${esc(STAFF_TEMPLATE)}</div></div>
+    <div id="staffShareEdit" class="richedit" contenteditable="true" style="min-height:200px">${cf.staffHtml!=null?cf.staffHtml:esc(STAFF_TEMPLATE)}</div></div>
   <div class="cfg"><h3>◆標準オプション（全会場共通）</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">スペース延長系は単価未確定(当日手入力)。ゴミ処理・飲み放題の単価はこの案件限定で編集できます（共通マスタ本体は変更されません）。数量・税抜合計は当日記入。</div>
     <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税抜合計</th></tr></thead><tbody id="stdFeeTbody">${stdRows||'<tr><td colspan="4" style="text-align:center;color:#64748b">共通オプション・料金マスタが未取得です</td></tr>'}</tbody></table>
     <div style="font-size:11px;color:#1d4ed8;margin-top:8px;padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px">◆維持管理費（税込・自動計算） ＝ 標準+自由記述オプションの税抜合計 × 5% ＝ <b id="maintFeeText" style="color:#0f172a">¥${maintFee.toLocaleString()}</b></div></div>
@@ -829,8 +851,8 @@ function renderConfirmation(){
     <div style="margin-top:10px"><div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:4px">お支払いに関するご案内（支払方法により自動切替）</div>
     <div id="payNote" style="white-space:pre-wrap;background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:12px;color:#334155"></div></div></div>
   <div class="cfg"><h3>◆領収書</h3><div class="grid2">
-    <label class="inl">宛名 <input id="confReceiptName" type="text" value="${esc(cf.receiptName)}" placeholder="株式会社〇〇 御中 など" style="flex:1;min-width:260px"></label>
-    <label class="inl">送付先 <input id="confReceiptAddress" type="text" value="${esc(cf.receiptAddress)}" placeholder="郵送が必要な場合のみ入力" style="flex:1;min-width:260px"></label></div>
+    <label class="inl">宛名 <input id="confReceiptName" type="text" value="${esc(cf.receiptName)}" placeholder="株式会社〇〇 御中 など" style="flex:1;min-width:320px;padding:10px 12px;font-size:15px"></label>
+    <label class="inl">送付先 <input id="confReceiptAddress" type="text" value="${esc(cf.receiptAddress)}" placeholder="郵送が必要な場合のみ入力" style="flex:1;min-width:320px;padding:10px 12px;font-size:15px"></label></div>
     <div style="font-size:11px;color:#92400e;margin-top:8px;padding:8px 10px;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px">※恐れ入りますが、領収書の宛名を「上様」とすることはご遠慮いただいております。<br>※発行後の領収書を分割してのご発行も承っておりませんので、あらかじめご了承ください。</div></div>
   <div class="sign"><div class="st">担当者確認欄（サイン用のみ）</div><div style="font-size:12px;color:#334155">ご利用ありがとうございます。上記内容に間違いがなければ、ご署名ください。</div>
     <div class="chk">当日精算分の領収書は<label class="inl"><input type="checkbox">当日お渡し済</label><label class="inl"><input type="checkbox">後日PDF送付</label><label class="inl"><input type="checkbox">希望なし・当日精算なし</label></div>
@@ -840,7 +862,12 @@ function renderConfirmation(){
     <button class="toolbtn sec" onclick="makeConfPdf('sign')">サイン用作成</button>
     <div id="pdfResult" style="font-size:12px;color:#94a3b8;margin-top:8px"></div></div>`;
   updatePayNote();
-  const ss=document.getElementById('seiyakuSummary');if(ss)ss.textContent=buildOutput();
+  const ss=document.getElementById('seiyakuSummary');
+  if(ss){
+    if(cf.summaryHtml==null){ss.textContent=buildOutput();cf.summaryHtml=ss.innerHTML;}
+    ss.oninput=()=>syncRichEdit_(ss);
+  }
+  const stfEl=document.getElementById('staffShareEdit'); if(stfEl)stfEl.oninput=()=>syncRichEdit_(stfEl);
   document.querySelectorAll('.std-price').forEach(el=>el.oninput=()=>{std[+el.dataset.idx].price=el.value===''?'':(+el.value||0);refreshMaintFee_();});
   document.querySelectorAll('.std-qty').forEach(el=>el.oninput=()=>{std[+el.dataset.idx].qty=el.value===''?'':(+el.value||0);refreshMaintFee_();});
   document.querySelectorAll('.free-name').forEach(el=>el.oninput=()=>{freeAll[+el.dataset.idx].name=el.value;});
@@ -881,6 +908,7 @@ function applyRichColor_(color){
   span.appendChild(frag);
   range.insertNode(span);
   sel.removeAllRanges();
+  syncRichEdit_(span.closest('.richedit'));
 }
 function collectConfPayload_(variant){
   const b=activeBlock();
