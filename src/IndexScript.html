@@ -709,6 +709,11 @@ function legacyCopyAttempt_(norm){
 function copyOut(){
   const t=document.getElementById('outText');
   const norm=t.value.replace(/\r\n/g,'\n').replace(/\n/g,'\r\n');
+  // LINE等の一部アプリはコピー元がLF(\n)のみだと改行のたびに空行が入って
+  // 表示されるため、テキストエリア自体の内容もCRLFに正規化してから選択する。
+  // これをしないと、自動コピーが失敗してユーザーが手動でCtrl+Cした場合に
+  // LFのまま(=LINEで改行が二重になる)コピーされてしまう。
+  t.value=norm;
   // サンドボックスiframe内ではプログラムによるクリップボード書き込みが
   // 権限で塞がれたり例外を投げたりする場合がある(Clipboard API・
   // document.execCommand('copy')のどちらも)。何が起きても最低限
