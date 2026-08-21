@@ -282,7 +282,7 @@ function renderConfirmationHtml_(variant, d, venue) {
     '<div class="maintnote">◆維持管理費（税込・自動計算）：標準オプション＋自由記述オプションの税抜合計×5% ＝ <b>¥' + maintFee.toLocaleString() + '</b></div>' +
     '<div class="sec">◆その他オプション（自由記述）</div>' +
     '<table class="fee"><thead><tr><th>品目</th><th style="width:100px">単価</th><th style="width:70px">数量</th><th style="width:70px">税表記</th></tr></thead><tbody>' + (freeRows || '<tr><td colspan="4" style="text-align:center;color:#888">なし</td></tr>') + '</tbody></table>' +
-    '<div class="maintnote">◆追加料金 合計金額（標準+自由記述オプション・税抜、当日計算して記載） ＝ <b>￥</b></div>' +
+    '<div class="maintnote" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span>◆追加料金 合計金額（標準+自由記述オプション・税抜、当日計算して記載）＝</span><span style="border:1px solid #333;min-width:110px;display:inline-block;padding:1px 8px">￥</span></div>' +
     '<div class="sec">◆お支払い状況</div><table>' +
       '<tr><th class="k">事前確定金額</th><td>' + money_(d.preConfirmed) + '</td><th class="k">事前支払額</th><td>' + money_(d.prePaid) + '</td></tr>' +
       '<tr><th class="k">(A)未精算額</th><td>' + money_(d.balance) + '</td><th class="k">支払期限</th><td>' + ce_(d.payDue || '') + '</td></tr>' +
