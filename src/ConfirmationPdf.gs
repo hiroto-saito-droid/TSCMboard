@@ -233,7 +233,7 @@ function renderConfirmationHtml_(variant, d, venue) {
   var receiptBlock = !isStaff
     ? '<div class="sec receipt">◆領収書</div>' +
       '<div class="receipt-box"><table class="receipt-table">' +
-        '<tr><th class="k">宛名</th><td>' + ce_(d.receiptName || '') + '</td></tr>' +
+        '<tr><th class="k">宛名</th><td class="name">' + ce_(d.receiptName || '') + '</td></tr>' +
         '<tr><th class="k">送付先</th><td class="addr">' + ce_(d.receiptAddress || '') + '</td></tr></table>' +
       '<div style="font-size:10px;color:#7a4a12;margin-top:6px">※恐れ入りますが、領収書の宛名を「上様」とすることはご遠慮いただいております。<br>※発行後の領収書を分割してのご発行も承っておりませんので、あらかじめご了承ください。</div></div>'
     : '';
@@ -246,7 +246,7 @@ function renderConfirmationHtml_(variant, d, venue) {
     ".doc-meta{font-size:9.5px;text-align:right;color:#444;}" +
     ".sec{background:#1a2b4a;color:#fff;font-size:10px;font-weight:bold;padding:2.5px 8px;margin:5px 0 2px;page-break-after:avoid;}.sec.sign{background:#0e7a5f;}.sec.receipt{background:#9a6a1e;}" +
     ".receipt-box{border:2px solid #9a6a1e;padding:6px 9px;margin-top:2px;page-break-inside:avoid;}" +
-    ".receipt-table td{height:15mm;vertical-align:top;font-size:11px;}.receipt-table td.addr{height:8mm;}" +
+    ".receipt-table td{height:15mm;vertical-align:top;font-size:11px;}.receipt-table td.name{height:12mm;}.receipt-table td.addr{height:8mm;}" +
     "table{width:100%;border-collapse:collapse;font-size:9px;margin-bottom:2px;}" +
     "tr{page-break-inside:avoid;}" +
     "th,td{border:1px solid #b0b6bf;padding:1.5px 5px;vertical-align:top;}th{background:#e8ecf2;font-weight:bold;}th.k{width:110px;}" +
@@ -287,7 +287,7 @@ function renderConfirmationHtml_(variant, d, venue) {
       '<tr><th class="k">事前確定金額</th><td>' + money_(d.preConfirmed) + '</td><th class="k">事前支払額</th><td>' + money_(d.prePaid) + '</td></tr>' +
       '<tr><th class="k">(A)未精算額</th><td>' + money_(d.balance) + '</td><th class="k">支払期限</th><td>' + ce_(d.payDue || '') + '</td></tr>' +
       '<tr><th class="k">事前確定分 支払方法</th><td>' + ce_(d.prePayMethod || '') + '</td><th class="k">追加分 支払方法</th><td>' + ce_(d.addPayMethod || '') + '</td></tr></table>' +
-    (isStaff ? '<div class="paynote">■ お支払いに関するご案内(スタッフ用のみ)\n' + ce_(payNote) + '</div>' : '') +
+    (payNote ? '<div class="paynote">■ お支払いに関するご案内\n' + ce_(payNote) + '</div>' : '') +
     receiptBlock +
     signBlock +
     '<div class="foot">本書はTSCM管理ボードの入力内容をもとに自動生成されました（' +

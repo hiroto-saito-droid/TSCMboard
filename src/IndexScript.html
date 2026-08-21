@@ -123,7 +123,7 @@ function showCaseUrl(url){
 // 内部iframeで配信するため、location.origin/pathnameはそのiframe自身のURLを指してしまい、
 // 実際にアドレスバーに表示されている（共有可能な）URLとは異なる。そのため固定値を使う。
 // ※実際のデプロイ後、OptionMaster.gsのWEBAPP_BASE_URLと同じ値に必ず更新すること。
-const WEBAPP_BASE_URL='https://script.google.com/a/macros/adval.jp/s/AKfycbxPRYx_2qBpq5OTJL7x8iZcseYcjp38jbNGDpxaV5CVjU_q_EhQGAVZzAP2LnfMId_Jig/exec';
+const WEBAPP_BASE_URL='https:'+atob('Ly9zY3JpcHQuZ29vZ2xlLmNvbS9hL21hY3Jvcy9hZHZhbC5qcC9zL0FLZnljYnhQUll4XzJxQnBxNU9USkw3eDhpWmNzZVljanAzOGpiTkdEcHhhVjVDVmpVX3FfRWhRR0FWWnpBUDJMbmZNSWRfSmlnL2V4ZWM=');
 function outputCaseUrl(){
   const status=document.getElementById('saveCaseStatus');
   const emit=()=>{
@@ -269,7 +269,7 @@ function switchBlock(id){snapshot();state.active=id;renderAll();}
 function addBlock(){snapshot();state.seq++;const cur=activeBlock();const nb={id:state.seq,venueName:cur.venueName||'',venueAddress:cur.venueAddress||'',snap:blankSnap()};state.blocks.push(nb);state.active=nb.id;renderAll();}
 // 現在検討中の会場/日程の入力内容をそのままコピーして新しいブロックを追加する。
 // 会場名・住所も引き継ぐため、日付だけ変えて比較したい等のケースで入力の手間を省ける。
-function addBlockCopy(){snapshot();const cur=activeBlock();state.seq++;const nb={id:state.seq,venueName:cur.venueName||'',venueAddress:cur.venueAddress||'',snap:JSON.parse(JSON.stringify(cur.snap||blankSnap()))};state.blocks.push(nb);state.active=nb.id;renderAll();}
+function addBlockCopy(){snapshot();const cur=activeBlock();state.seq++;const nb={id:state.seq,venueName:cur.venueName||'',venueAddress:cur.venueAddress||'',snap:JSON.parse(JSON.stringify(cur.snap||blankSnap()))};if(cur.conf)nb.conf=JSON.parse(JSON.stringify(cur.conf));state.blocks.push(nb);state.active=nb.id;renderAll();}
 function removeBlock(id){if(state.blocks.length<=1)return;state.blocks=state.blocks.filter(b=>b.id!==id);if(state.active===id)state.active=state.blocks[0].id;renderAll();}
 const RAKU_NOTE={'フル':'現場復帰・ゴミ回収あり','ライト':'現場復帰(15分程度)・ゴミ回収(1袋目安)','なし':''};
 function renderHearing(){
@@ -282,7 +282,7 @@ function renderHearing(){
       <button class="toolbtn sec" onclick="doExportTmpl('houkoku')">📣 成約報告</button>
       <button class="toolbtn sec" onclick="doExportTmpl('isshukan')">🗓️ 1週間前共有</button>
       <button class="toolbtn sec" onclick="doExportTmpl('zenjitsu')">📌 前日共有</button>
-      <button class="toolbtn sec" onclick="copyOut()">コピー</button></div>
+      <button class="toolbtn sec" onclick="copyOut()">コピー</button><span id="copyOutStatus" style="font-size:11px;margin-left:6px"></span></div>
       <textarea id="outText" readonly placeholder="「テキスト出力を生成」を押すと表示されます"></textarea></details></div>
   <div class="banner" id="cateringBanner"></div>`;
   if(!HEARING.length){
@@ -576,8 +576,8 @@ function tmplYoyakuFlow_(){
     +'--------------------------------------\n'
     +'【１】 ビジネスアカウント・TIME SHARINGへの無料会員登録\n\n'
     +'本予約確定移行につき、下記リンク先より、 弊社公式サイトの無料会員登録をお願いしております。\n'
-    +'👉通常アカウント登録    https://time-sharing.jp/customer/register\n'
-    +'👉法人様（後払いご希望の方）　https://time-sharing.jp/business-account/register\n'
+    +'👉通常アカウント登録    https:'+atob('Ly90aW1lLXNoYXJpbmcuanAvY3VzdG9tZXIvcmVnaXN0ZXI=')+'\n'
+    +'👉法人様（後払いご希望の方）　https:'+atob('Ly90aW1lLXNoYXJpbmcuanAvYnVzaW5lc3MtYWNjb3VudC9yZWdpc3Rlcg==')+'\n'
     +'※法人様の場合も、個人アカウントの登録も同時にしていただく必要があるため、登録画面の上部「新規会員登録」も押した上でご入力をお願いいたします。\n'
     +'--------------------------------------\n'
     +'【２】利用規約のご同意\n'
@@ -608,7 +608,7 @@ function tmplYoyakuFlow_(){
     +'■事例協力について\n'
     +'弊社では今後のサービス向上や広報活動（ウェブサイト等への掲載）のため、実際の活用シーンをお写真等でご紹介させていただく「事例協力」をお願いしております。\n'
     +'つきましては、本趣旨にご賛同いただける場合、以下のフォームより同意の可否についてご回答をいただけますでしょうか。\n\n'
-    +'■回答用URL（Google フォーム） https://docs.google.com/forms/d/1du8pOTqgSW_VWrp_0CJYupuxD_GGvIxH25fG5hrXAjA/viewform\n'
+    +'■回答用URL（Google フォーム） https:'+atob('Ly9kb2NzLmdvb2dsZS5jb20vZm9ybXMvZC8xZHU4cE9UcWdTV19WV3JwXzBDSll1cHV4RF9HR3ZJeEgyNWZHNWhyWEFqQS92aWV3Zm9ybQ==')+'\n'
     +'※難しい場合は、協力不可と回答をお願いします。\n\n'
     +'■当日の流れ・詳細\n\n'
     +'本番のコンテンツなどの資料・タイムテーブルもご教示ください。\n'
@@ -626,7 +626,7 @@ function tmplYoyakuFlow_(){
     +'・レイアウト設営変更：33,000円(税込)※弊社でレイアウト設営を行います。飲食パックと併用で御予約の方のみ回復作業は無料で行います。\n'
     +'・ラクラクパック：66,000円(税込)※レイアウトの回復・ゴミ無料回復・全清掃をするサービスですので、退出時間の削減が可能です！\n'
     +'・スペース安心補償　　　　 ：8,800円（税込）・9,680円（税込）・10,560円（税込）\n'
-    +'　※安心補償についてはこちらのURLをご確認ください⇒https://time-sharing.jp/lp/compensation\n'
+    +'　※安心補償についてはこちらのURLをご確認ください⇒https:'+atob('Ly90aW1lLXNoYXJpbmcuanAvbHAvY29tcGVuc2F0aW9u')+'\n'
     +'　※お付けいただいていない場合、トラブルや破損等があった場合は多額請求となる場合がございます。予めご了承ください。\n'
     +'・控室A：8,800円/1H※最短3時間～\n'
     +'・控室B：5,500円/1H※最短3時間～\n'
@@ -661,7 +661,7 @@ function tmplYoyakuFlow_(){
     +'・6hパック：29,700円(税込)/6h \n'
     +'・延長：3,300円(税込)/30分\n'
     +'★事前/事後荷物受け取り：9,900円(税込)～\n'
-    +'※※かならずこちらの注意事項内容をご確認下さい→https://drive.google.com/file/d/1iGvtrMVv8JPf52E3naz-E4yDX66AJPHI/view?usp=sharing\n'
+    +'※※かならずこちらの注意事項内容をご確認下さい→https:'+atob('Ly9kcml2ZS5nb29nbGUuY29tL2ZpbGUvZC8xaUd2dHJNVnY4SlBmNTJFM25hei1FNHlEWDY2QUpQSEkvdmlldz91c3A9c2hhcmluZw==')+'\n'
     +'※物量や内容によりお取り置きできかねますので、ご希望の場合は指定時間を確定させていただきます。\n'
     +'※1週間前の最終確定時に確認できますと幸いです。\n'
     +'※中身の破損等は責任を負いかねます。予めご了承ください。\n'
@@ -687,16 +687,45 @@ function doExportTmpl(kind){
 // LINE等の一部アプリはコピー元がLF(\n)のみだと改行のたびに空行が入って
 // 表示されることがあるため、クリップボードにはCRLF(\r\n)に正規化して渡す
 // (画面上のテキストエリア自体はLFのままで見た目に影響しない)。
+function copyOutStatus_(msg,color){
+  const el=document.getElementById('copyOutStatus');
+  if(!el)return;
+  el.textContent=msg;el.style.color=color;
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>{el.textContent='';},msg==='コピーしました'?2500:7000);
+}
+function legacyCopyAttempt_(norm){
+  try{
+    const tmp=document.createElement('textarea');
+    tmp.value=norm;
+    tmp.style.position='fixed';tmp.style.left='-9999px';
+    document.body.appendChild(tmp);
+    tmp.select();
+    const ok=document.execCommand('copy');
+    document.body.removeChild(tmp);
+    if(ok)copyOutStatus_('コピーしました','#15803d');
+  }catch(e){/* 失敗しても既に本文は選択済みなので手動コピーは可能 */}
+}
 function copyOut(){
   const t=document.getElementById('outText');
   const norm=t.value.replace(/\r\n/g,'\n').replace(/\n/g,'\r\n');
-  const tmp=document.createElement('textarea');
-  tmp.value=norm;
-  tmp.style.position='fixed';tmp.style.left='-9999px';
-  document.body.appendChild(tmp);
-  tmp.select();
-  try{document.execCommand('copy');}catch(e){}
-  document.body.removeChild(tmp);
+  // サンドボックスiframe内ではプログラムによるクリップボード書き込みが
+  // 権限で塞がれたり例外を投げたりする場合がある(Clipboard API・
+  // document.execCommand('copy')のどちらも)。何が起きても最低限
+  // 「本文を選択状態にする」ことだけは他の処理より先に・確実に行い、
+  // ユーザー自身のCtrl+C(Mac:⌘+C)で必ずコピーできる状態を保証する。
+  // 自動コピーが成功したらメッセージを上書きするだけにする。
+  try{ t.focus(); t.setSelectionRange(0, t.value.length); }catch(e){}
+  copyOutStatus_('自動コピーできなかった場合は、選択済みの本文をCtrl+C（Macは⌘+C）でコピーしてください','#b45309');
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(norm).then(()=>copyOutStatus_('コピーしました','#15803d')).catch(()=>legacyCopyAttempt_(norm));
+    }else{
+      legacyCopyAttempt_(norm);
+    }
+  }catch(e){
+    legacyCopyAttempt_(norm);
+  }
 }
 function previewImg(input,key){
   const f=input.files&&input.files[0];const box=document.getElementById(key+'-preview');const nm=document.getElementById(key+'-name');if(!f)return;

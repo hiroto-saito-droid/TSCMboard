@@ -70,6 +70,10 @@ label.inl{display:flex;gap:6px;align-items:center;font-size:12px;color:#334155}
 .case-url-box{position:fixed;top:60px;right:20px;background:#ffffff;border:1px solid #0ea5e9;border-radius:8px;padding:10px;z-index:1001;display:flex;gap:6px;align-items:center;box-shadow:0 4px 16px rgba(15,23,42,.15)}
 .case-url-box input{width:340px;padding:6px;border-radius:4px;border:1px solid #cbd5e1;background:#f8fafc;color:#1e293b}
 .case-url-box button{background:none;border:none;color:#64748b;font-size:16px;cursor:pointer}
+#nowLoadingOverlay{position:fixed;inset:0;background:#f1f5f9;z-index:99998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+#nowLoadingOverlay .spin{width:36px;height:36px;border:4px solid #cbd5e1;border-top-color:#1d4ed8;border-radius:50%;animation:nowLoadingSpin 0.8s linear infinite}
+#nowLoadingOverlay .msg{font-size:13px;font-weight:800;color:#334155}
+@keyframes nowLoadingSpin{to{transform:rotate(360deg)}}
 /* ここから下はタブレット・スマートフォン専用。PC表示（下記条件を満たさない画面幅）には一切影響しない */
 @media (max-width:900px){
   .grid2{grid-template-columns:1fr}
@@ -95,6 +99,7 @@ label.inl{display:flex;gap:6px;align-items:center;font-size:12px;color:#334155}
   .vbar input[type=text]{width:100%;min-width:0}
 }
 </style></head><body>
+<div id="nowLoadingOverlay"><div class="spin"></div><div class="msg">Now Loading…（本体スクリプトを読み込み中）</div></div>
 <div class="top"><div class="h1">TSCM 管理ボード<span class="sub">TIMESHARINGシリーズ全会場向け・会場自由入力・標準オプション共通マスタ駆動</span>
 <span id="statusPill" class="pill" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1">ステータス未設定</span>
 <button id="newCaseBtn" onclick="startNewCase()" class="pill" style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:inherit" title="現在の内容を破棄して新規案件を開始">🆕 新規案件</button>
@@ -134,26 +139,59 @@ window.INITIAL_CASE_ID='<?!= initialCaseId ?>';
 <script>
 // 本体スクリプトを一括転送すると、内部転送経路のサイズ上限により構文的に
 // 不完全な状態で受信され実行に失敗する現象を確認したため(2026-08-18)、
-// 小さなチャンクに分割してgoogle.script.runで順次取得し、連結してから実行する。
+// 小さなチャンクに分割してgoogle.script.runで取得し、連結してから実行する。
+// 各チャンクは直列(1件ずつ順番待ち)ではなく並列で同時に要求し、往復の
+// ネットワーク遅延がチャンク数分積み上がらないようにして起動を高速化する
+// (受信後にindex順へ並べ直して結合するため、到着順が入れ替わっても
+// 内容は変わらない)。
 (function(){
+  function hideLoadingOverlay(){
+    var ov=document.getElementById('nowLoadingOverlay');
+    if(ov)ov.parentNode.removeChild(ov);
+  }
   function showLoadError(err){
+    hideLoadingOverlay();
     document.body.insertAdjacentHTML('afterbegin','<div style="background:#dc2626;color:#fff;padding:16px;font-size:14px;position:fixed;top:0;left:0;right:0;z-index:99999">本体スクリプトの読込に失敗しました: '+err+'</div>');
+  }
+  function waitForContentReady(){
+    // 本体スクリプトの実行開始後、非同期処理を経て①ヒアリングシートが
+    // 実際に描画されるまでにも時間差があるため、スクリプト注入だけで隠すと
+    // タブの中身が出るまで空白に見える。中身が描画されたことを確認できる
+    // まで表示し続ける(最大15秒でタイムアウト)。
+    var tries=0;
+    var iv=setInterval(function(){
+      tries++;
+      var hearing=document.getElementById('hearing');
+      if((hearing&&hearing.children.length>0)||tries>=150){
+        clearInterval(iv);
+        hideLoadingOverlay();
+      }
+    },100);
   }
   function runScript(parts){
     var s=document.createElement('script');
     s.textContent=parts.join('');
     document.body.appendChild(s);
+    waitForContentReady();
   }
-  function fetchChunk(index, total, parts){
-    if (index >= total) { runScript(parts); return; }
-    google.script.run.withSuccessHandler(function(chunk){
-      parts.push(chunk);
-      fetchChunk(index+1, total, parts);
-    }).withFailureHandler(showLoadError).apiGetAppScriptChunk(index);
+  function fetchAllChunksParallel(total){
+    if(total<=0){runScript([]);return;}
+    var parts=new Array(total),remaining=total,failed=false;
+    for(var i=0;i<total;i++){
+      (function(idx){
+        google.script.run.withSuccessHandler(function(chunk){
+          if(failed)return;
+          parts[idx]=chunk;
+          if(--remaining===0)runScript(parts);
+        }).withFailureHandler(function(err){
+          if(failed)return;
+          failed=true;
+          showLoadError(err);
+        }).apiGetAppScriptChunk(idx);
+      })(i);
+    }
   }
-  google.script.run.withSuccessHandler(function(total){
-    fetchChunk(0, total, []);
-  }).withFailureHandler(showLoadError).apiGetAppScriptChunkCount();
+  google.script.run.withSuccessHandler(fetchAllChunksParallel).withFailureHandler(showLoadError).apiGetAppScriptChunkCount();
 })();
 </script>
 </body></html>
