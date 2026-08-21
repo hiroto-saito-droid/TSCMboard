@@ -881,6 +881,13 @@ function renderConfirmation(){
   </tr>`).join('');
   const maintFee=computeMaintenanceFee_(b);
   const cf=ensureConf_(b);
+  // <select>は該当するoptionが無いとブラウザが自動的に先頭を表示するが、
+  // cf.prePayMethod/addPayMethodはユーザーが実際にonchangeを発火させるまで
+  // 空のまま残ってしまい、画面表示(先頭が選択されて見える)と保存値(空)が
+  // 食い違ってPDF上で空欄になる不具合があったため、表示と同じ既定値を
+  // 明示的に保持しておく。
+  if(!cf.prePayMethod)cf.prePayMethod=PAY_PRE[0];
+  if(!cf.addPayMethod)cf.addPayMethod=PAY_ADD[0];
   document.getElementById('confirmation').innerHTML=`
   <div class="banner">利用確認書（会場：<b>${esc(b.venueName||'(会場未入力)')}</b>${b.venueAddress?'　'+esc(b.venueAddress):''}）。</div>
   <div class="cfg"><h3>ヘッダ・ご利用内容</h3><div class="grid2">
