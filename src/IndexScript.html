@@ -161,7 +161,7 @@ function ctl(it){
     return html;
   }
   if(t==='date')return `<input ${di} type="date" value="${esc(val)}">`;
-  if(t==='datetime')return `<input ${di} type="text" value="${esc(val)}" style="min-width:200px" placeholder="YYYY-MM-DDTHH:MM">`;
+  if(t==='datetime')return `<input ${di} type="datetime-local" value="${esc(val)}" style="min-width:200px">`;
   if(t==='timerange'){let a='',b='';if(val&&val.indexOf('～')>-1){const p=val.split('～');a=p[0];b=p[1];}return `<div class="timerange" ${di}><input type="time" value="${a}"> 〜 <input type="time" value="${b}"></div>`;}
   if(t==='textarea')return `<textarea ${di}>${esc(val)}</textarea>`;
   return `<input ${di} type="text" value="${esc(val)}" placeholder="入力">`;
@@ -797,8 +797,33 @@ const payOptHtml=(a,sel)=>a.map(o=>`<option ${o===sel?'selected':''}>${o}</optio
 // のあり/なし切替等)にvalue=""へ戻ってしまい入力内容がPDFへ反映されないバグがあったため、
 // ブロックごとの状態(b.conf)に保持し、再描画のたびに復元する方式に変更した。
 function ensureConf_(b){
-  if(!b.conf)b.conf={attendant:'',preConfirmed:'',prePaid:'',balance:'',payDue:'',prePayMethod:'',addPayMethod:'',receiptName:'',receiptAddress:'',summaryHtml:null,staffHtml:null};
+  if(!b.conf)b.conf={attendant:'',preConfirmed:'',prePaid:'',balance:'',payDue:'',prePayMethod:'',addPayMethod:'',receiptName:'',receiptAddress:'',summaryHtml:null,staffHtml:null,mgmtFee:'あり'};
+  if(!b.conf.mgmtFee)b.conf.mgmtFee='あり';
   return b.conf;
+}
+// (A)事前確定分未精算額＝事前確定金額－事前支払額のみ自動計算する(事前確定・
+// 事前支払額は当日ではなく事前に確定している金額のため)。合計お支払い金額は
+// 追加料金合計が未確定のため自動計算せず、PDF側で空欄「￥」のまま出力する。
+function refreshPaySummary_(){
+  const cf=ensureConf_(activeBlock());
+  const pre=Number(String(cf.preConfirmed||'').replace(/[,¥\s]/g,''))||0;
+  const paid=Number(String(cf.prePaid||'').replace(/[,¥\s]/g,''))||0;
+  const balance=pre-paid;
+  cf.balance=String(balance);
+  const balEl=document.getElementById('confBalance');
+  if(balEl)balEl.value='￥'+balance.toLocaleString();
+}
+// 数字だけ入力すれば表示上は自動でカンマ区切り(￥表記)になるようにする。
+// 内部値(cf.xxx)は数字のみを保持し、表示だけ整形する(カーソル位置は
+// 末尾からの残り文字数を基準に復元し、末尾入力中心の実利用では違和感が出ない)。
+function formatMoneyInput_(el,onCommit){
+  const raw=el.value.replace(/[^\d]/g,'');
+  const tailLen=el.value.length-el.selectionStart;
+  const formatted=raw===''?'':Number(raw).toLocaleString();
+  el.value=formatted;
+  const pos=Math.max(0,formatted.length-tailLen);
+  el.setSelectionRange(pos,pos);
+  if(onCommit)onCommit(raw);
 }
 // ご成約内容サマリー／立会スタッフ共有事項の編集内容をブロックごとに保持する
 // (renderConfirmation()が再実行されても編集内容を保持したまま)。
@@ -820,13 +845,6 @@ function ensureFreeFees_(b){ if(!b.freeFees)b.freeFees=[]; return b.freeFees; }
 // 既存(この機能追加より前)に保存された自由記述オプションはenabledキーを持たないため、
 // undefinedは「あり」扱いにして後方互換を保つ(明示的にfalseの場合のみ「なし」)。
 const freeFeeOn_=o=>o.enabled!==false;
-function computeMaintenanceFee_(b){
-  const std=ensureStandardFees_(b), free=ensureFreeFees_(b);
-  let rate=5,subtotal=0;
-  std.forEach(o=>{ if(o.code==='MAINT'||o.kind==='percentage'){ if(o.rate)rate=toNum_(o.rate); return; } if(o.taxType==='税込')return; subtotal+=toNum_(o.price)*toNum_(o.qty); });
-  free.forEach(o=>{ if(!freeFeeOn_(o))return; if(o.taxType==='税込')return; subtotal+=toNum_(o.price)*toNum_(o.qty); });
-  return Math.round(subtotal*rate/100);
-}
 function addFreeFeeRow(){ensureFreeFees_(activeBlock()).push({name:'',price:'',qty:'',taxType:'税別',enabled:true});renderConfirmation();}
 function delFreeFeeRow(idx){ensureFreeFees_(activeBlock()).splice(idx,1);renderConfirmation();renderHearingFreeOptions_();}
 // ①ヒアリングシートの「会場固有オプション」欄用: 品目名とあり/なしの登録のみ行い、
@@ -855,14 +873,15 @@ function computeFeeSubtotal_(b){
   free.forEach(o=>{total+=toNum_(o.price)*toNum_(o.qty);});
   return total;
 }
-function refreshMaintFee_(){
+// 標準オプション各行の税抜合計(単価×数量)だけを再計算して表示更新する
+// (維持管理費は当日確定後に手計算・記入するため空欄のまま自動更新しない)。
+function refreshStdFeeSubtotals_(){
   const b=activeBlock();
   const std=ensureStandardFees_(b).filter(o=>o.code!=='MAINT'&&o.kind!=='percentage');
   document.querySelectorAll('#stdFeeTbody tr').forEach((tr,i)=>{
     const cell=tr.children[3]; const o=std[i]; if(!o||!cell)return;
     cell.textContent=(o.price!==''&&o.price!=null&&o.qty!==''&&o.qty!=null)?('¥'+(toNum_(o.price)*toNum_(o.qty)).toLocaleString()):'';
   });
-  const t=document.getElementById('maintFeeText'); if(t)t.textContent='¥'+computeMaintenanceFee_(b).toLocaleString();
 }
 function renderConfirmation(){
   const b=activeBlock();
@@ -884,7 +903,6 @@ function renderConfirmation(){
     <td style="width:78px"><select class="free-tax" data-idx="${o._i}"><option ${o.taxType!=='税込'?'selected':''}>税別</option><option ${o.taxType==='税込'?'selected':''}>税込</option></select></td>
     <td style="width:26px"><button type="button" class="free-del" data-idx="${o._i}" title="この行を削除" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px">×</button></td>
   </tr>`).join('');
-  const maintFee=computeMaintenanceFee_(b);
   const cf=ensureConf_(b);
   // <select>は該当するoptionが無いとブラウザが自動的に先頭を表示するが、
   // cf.prePayMethod/addPayMethodはユーザーが実際にonchangeを発火させるまで
@@ -908,16 +926,18 @@ function renderConfirmation(){
     <div id="staffShareEdit" class="richedit" contenteditable="true" style="min-height:200px">${cf.staffHtml!=null?cf.staffHtml:esc(STAFF_TEMPLATE)}</div></div>
   <div class="cfg"><h3>◆標準オプション（全会場共通）</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">スペース延長系は単価未確定(当日手入力)。ゴミ処理・飲み放題の単価はこの案件限定で編集できます（共通マスタ本体は変更されません）。数量・税抜合計は当日記入。</div>
     <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税抜合計</th></tr></thead><tbody id="stdFeeTbody">${stdRows||'<tr><td colspan="4" style="text-align:center;color:#64748b">共通オプション・料金マスタが未取得です</td></tr>'}</tbody></table>
-    <div style="font-size:11px;color:#1d4ed8;margin-top:8px;padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px">◆維持管理費（税込・自動計算） ＝ 標準+自由記述オプションの税抜合計 × 5% ＝ <b id="maintFeeText" style="color:#0f172a">¥${maintFee.toLocaleString()}</b></div></div>
+    <label class="inl" style="margin-top:8px">維持管理費 <select id="mgmtFeeSel"><option value="あり" ${cf.mgmtFee==='あり'?'selected':''}>あり</option><option value="なし" ${cf.mgmtFee==='なし'?'selected':''}>なし</option></select></label>
+    ${cf.mgmtFee==='なし'?'':'<div style="font-size:11px;color:#1d4ed8;margin-top:8px;padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px">◆維持管理費（税込） ＝ 標準+自由記述オプションの税抜合計 × 5% ＝ ￥＿＿＿＿＿＿＿＿（当日記入）</div>'}</div>
   <div class="cfg"><h3>◆その他オプション（自由記述）</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">①ヒアリングシートの「会場固有オプション」で「あり」にした項目がここに表示されます。単価・数量はここで入力してください。ここで直接追加した品目は自動的に「あり」扱いになります。</div>
     <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税表記</th><th></th></tr></thead><tbody id="freeFeeTbody">${freeRows||'<tr><td colspan="5" style="text-align:center;color:#64748b">「あり」の会場固有オプションはありません</td></tr>'}</tbody></table>
     <div style="font-size:11px;color:#334155;margin-top:8px;padding:8px 10px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>◆追加料金 合計金額（標準+自由記述オプション・税抜、当日計算して記載）＝</span><span id="feeSubtotalText" style="border-bottom:1.5px solid #64748b;min-width:140px;display:inline-block;padding:2px 6px;background:#fff">￥</span></div>
     <button type="button" class="toolbtn sec" onclick="addFreeFeeRow()" style="margin-top:8px">＋ 品目を追加</button></div>
-  <div class="cfg"><h3>◆お支払い状況</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">事前確定金額・事前支払額・未精算額は数字だけ入力すればPDF上で¥表記になります。</div><div class="grid2">
-    <label class="inl">事前確定金額 ￥<input id="confPreConfirmed" type="text" value="${esc(cf.preConfirmed)}" placeholder="数字のみ入力"></label><label class="inl">事前支払額 ￥<input id="confPrePaid" type="text" value="${esc(cf.prePaid)}" placeholder="数字のみ入力"></label>
-    <label class="inl">(A)事前確定分未精算額 ￥<input id="confBalance" type="text" value="${esc(cf.balance)}" placeholder="数字のみ入力"></label><label class="inl">支払期限 <input id="confPayDue" type="date" value="${esc(cf.payDue)}"></label>
+  <div class="cfg"><h3>◆お支払い状況</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">事前確定金額・事前支払額は数字だけ入力すれば自動でカンマ区切り表示になります。(A)未精算額は自動計算です。合計お支払い金額は追加料金合計の確定後に手計算・記入してください。</div><div class="grid2">
+    <label class="inl">事前確定金額 <input id="confPreConfirmed" type="text" value="${cf.preConfirmed?'￥'+Number(String(cf.preConfirmed).replace(/[,¥\s]/g,'')||0).toLocaleString():''}" placeholder="数字のみ入力"></label><label class="inl">事前支払額 <input id="confPrePaid" type="text" value="${cf.prePaid?'￥'+Number(String(cf.prePaid).replace(/[,¥\s]/g,'')||0).toLocaleString():''}" placeholder="数字のみ入力"></label>
+    <label class="inl">(A)事前確定分未精算額（自動計算） <input id="confBalance" type="text" value="￥${Number(cf.balance||0).toLocaleString()}" readonly style="background:#f1f5f9;color:#64748b;cursor:not-allowed"></label><label class="inl">支払期限 <input id="confPayDue" type="date" value="${esc(cf.payDue)}"></label>
     <label class="inl">事前確定分の支払方法 <select id="prePay" onchange="updatePayNote()">${payOptHtml(PAY_PRE,cf.prePayMethod)}</select></label>
-    <label class="inl">追加分の支払方法 <select id="addPay" onchange="updatePayNote()">${payOptHtml(PAY_ADD,cf.addPayMethod)}</select></label></div>
+    <label class="inl">追加分の支払方法 <select id="addPay" onchange="updatePayNote()">${payOptHtml(PAY_ADD,cf.addPayMethod)}</select></label>
+    <div class="inl" style="margin-top:6px;font-size:14px;flex-wrap:wrap;gap:6px"><b>合計お支払い金額</b>：追加料金合計金額<span style="font-weight:700">￥＿＿＿＿＿＿＿＿</span>＋<span style="color:#dc2626;font-weight:700">(A)事前確定分未精算額 ￥${Number(cf.balance||0).toLocaleString()}</span>＝<span style="font-weight:700;font-size:16px;color:#1d4ed8">￥＿＿＿＿＿＿＿＿</span></div></div>
     <div style="margin-top:10px"><div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:4px">お支払いに関するご案内（支払方法により自動切替）</div>
     <div id="payNote" style="white-space:pre-wrap;background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:12px;color:#334155"></div></div></div>
   <div class="cfg"><h3>◆領収書</h3><div class="grid2">
@@ -938,22 +958,23 @@ function renderConfirmation(){
     ss.oninput=()=>syncRichEdit_(ss);
   }
   const stfEl=document.getElementById('staffShareEdit'); if(stfEl)stfEl.oninput=()=>syncRichEdit_(stfEl);
-  document.querySelectorAll('.std-price').forEach(el=>el.oninput=()=>{std[+el.dataset.idx].price=el.value===''?'':(+el.value||0);refreshMaintFee_();});
-  document.querySelectorAll('.std-qty').forEach(el=>el.oninput=()=>{std[+el.dataset.idx].qty=el.value===''?'':(+el.value||0);refreshMaintFee_();});
+  document.querySelectorAll('.std-price').forEach(el=>el.oninput=()=>{std[+el.dataset.idx].price=el.value===''?'':(+el.value||0);refreshStdFeeSubtotals_();});
+  document.querySelectorAll('.std-qty').forEach(el=>el.oninput=()=>{std[+el.dataset.idx].qty=el.value===''?'':(+el.value||0);refreshStdFeeSubtotals_();});
   document.querySelectorAll('.free-name').forEach(el=>el.oninput=()=>{freeAll[+el.dataset.idx].name=el.value;});
-  document.querySelectorAll('.free-price').forEach(el=>el.oninput=()=>{freeAll[+el.dataset.idx].price=el.value===''?'':(+el.value||0);refreshMaintFee_();});
-  document.querySelectorAll('.free-qty').forEach(el=>el.oninput=()=>{freeAll[+el.dataset.idx].qty=el.value===''?'':(+el.value||0);refreshMaintFee_();});
-  document.querySelectorAll('.free-tax').forEach(el=>el.onchange=()=>{freeAll[+el.dataset.idx].taxType=el.value;refreshMaintFee_();});
+  document.querySelectorAll('.free-price').forEach(el=>el.oninput=()=>{freeAll[+el.dataset.idx].price=el.value===''?'':(+el.value||0);refreshStdFeeSubtotals_();});
+  document.querySelectorAll('.free-qty').forEach(el=>el.oninput=()=>{freeAll[+el.dataset.idx].qty=el.value===''?'':(+el.value||0);refreshStdFeeSubtotals_();});
+  document.querySelectorAll('.free-tax').forEach(el=>el.onchange=()=>{freeAll[+el.dataset.idx].taxType=el.value;refreshStdFeeSubtotals_();});
   document.querySelectorAll('.free-del').forEach(el=>el.onclick=()=>delFreeFeeRow(+el.dataset.idx));
   document.getElementById('confAttendant').oninput=e=>{cf.attendant=e.target.value;};
-  document.getElementById('confPreConfirmed').oninput=e=>{cf.preConfirmed=e.target.value;};
-  document.getElementById('confPrePaid').oninput=e=>{cf.prePaid=e.target.value;};
-  document.getElementById('confBalance').oninput=e=>{cf.balance=e.target.value;};
+  document.getElementById('confPreConfirmed').oninput=e=>{formatMoneyInput_(e.target,raw=>{cf.preConfirmed=raw;refreshPaySummary_();});};
+  document.getElementById('confPrePaid').oninput=e=>{formatMoneyInput_(e.target,raw=>{cf.prePaid=raw;refreshPaySummary_();});};
   document.getElementById('confPayDue').oninput=e=>{cf.payDue=e.target.value;};
+  document.getElementById('mgmtFeeSel').addEventListener('change',e=>{cf.mgmtFee=e.target.value;renderConfirmation();});
   document.getElementById('prePay').addEventListener('change',e=>{cf.prePayMethod=e.target.value;});
   document.getElementById('addPay').addEventListener('change',e=>{cf.addPayMethod=e.target.value;});
   document.getElementById('confReceiptName').oninput=e=>{cf.receiptName=e.target.value;};
   document.getElementById('confReceiptAddress').oninput=e=>{cf.receiptAddress=e.target.value;};
+  refreshPaySummary_();
 }
 function richToolbarHtml(){
   return '<button type="button" class="toolbtn sec" onmousedown="event.preventDefault()" onclick="document.execCommand(\'bold\')"><b>B</b> 太字</button>'+
@@ -1004,7 +1025,7 @@ function collectConfPayload_(variant){
     summaryHtml:variant==='sign'?signSummary:document.getElementById('seiyakuSummary').innerHTML,
     staffShareHtml:document.getElementById('staffShareEdit').innerHTML,
     standardFees:ensureStandardFees_(b),freeFees:ensureFreeFees_(b).filter(freeFeeOn_),
-    maintenanceFee:computeMaintenanceFee_(b),
+    mgmtFee:cf.mgmtFee,
     preConfirmed:cf.preConfirmed,prePaid:cf.prePaid,balance:cf.balance,payDue:cf.payDue,
     receiptName:cf.receiptName,receiptAddress:cf.receiptAddress,
     prePayMethod:cf.prePayMethod,addPayMethod:cf.addPayMethod};

@@ -162,25 +162,6 @@ function confFeeRowHtml_(o) {
   return '<tr><td>' + ce_(o.name) + unit + '</td><td class="r">' + price + '</td><td class="r">' + qty + '</td><td class="r">' + taxBadge + '</td></tr>';
 }
 
-/**
- * 標準オプション(スペース延長系/ゴミ処理/飲み放題)＋自由記述オプションのうち
- * 税別扱いの行の税抜合計×5%で維持管理費を算出する（税込行は既に税を含むため対象外）。
- */
-function confComputeMaintenanceFee_(standardFees, freeFees) {
-  var rate = 5;
-  var subtotal = 0;
-  (standardFees || []).forEach(function (o) {
-    if (o.code === 'MAINT' || o.kind === 'percentage') { if (o.rate) rate = Number(o.rate) || 5; return; }
-    if (o.taxType === '税込') return;
-    subtotal += om_num_(o.price) * (om_num_(o.qty) || 0);
-  });
-  (freeFees || []).forEach(function (o) {
-    if (o.taxType === '税込') return;
-    subtotal += om_num_(o.price) * (om_num_(o.qty) || 0);
-  });
-  return Math.round(subtotal * rate / 100);
-}
-
 /** 維持管理費(5%)算出前の、標準+自由記述オプションの単純合計(税抜・税込問わず)。 */
 function confComputeFeeSubtotal_(standardFees, freeFees) {
   var subtotal = 0;
@@ -204,7 +185,13 @@ function renderConfirmationHtml_(variant, d, venue) {
   var freeFees = d.freeFees || [];
   var stdRows = standardFees.filter(function (o) { return o.code !== 'MAINT' && o.kind !== 'percentage'; }).map(confFeeRowHtml_).join('');
   var freeRows = freeFees.map(confFeeRowHtml_).join('');
-  var maintFee = (d.maintenanceFee != null && d.maintenanceFee !== '') ? Number(d.maintenanceFee) : confComputeMaintenanceFee_(standardFees, freeFees);
+  // 維持管理費はボード側の「維持管理費 あり/なし」トグル(d.mgmtFee)で表示自体を
+  // 省略できる。表示する場合も、当日実際の数量確定後に手計算・記入するため
+  // 自動計算した金額は印字せず空欄「¥」のまま出力する(GPCMボードと同方針)。
+  var mgmtFeeOn = d.mgmtFee !== 'なし';
+  // (A)未精算額はフロント側(cf.balance)も自動計算しているが、単一の真値を保つため
+  // ここでもd.preConfirmed/d.prePaidから独立して再計算する(渡された値は信頼しない)。
+  var balanceVal = om_num_(d.preConfirmed) - om_num_(d.prePaid);
 
   var payNote = confPayNote_(d.prePayMethod);
   var addNote = confPayNote_(d.addPayMethod);
@@ -254,6 +241,11 @@ function renderConfirmationHtml_(variant, d, venue) {
     ".share{white-space:pre-wrap;border:1px solid #b0b6bf;background:#fffdf5;padding:5px 8px;font-size:9px;}" +
     ".fee .r{text-align:right;}.paynote{white-space:pre-wrap;border:1px solid #b0b6bf;background:#f4f8ff;padding:4px 7px;font-size:9px;margin-top:2px;}" +
     ".maintnote{font-size:8.5px;color:#666;margin:2px 0 4px;}" +
+    // お支払い状況・領収書・署名欄は、お客様が最終的に確認・署名する一連の内容のため、
+    // ページまたぎでバラバラに分割されないよう1つの塊としてまとめて改ページ判定する。
+    ".pay-group{page-break-inside:avoid;}" +
+    ".pay-total{font-size:15px;font-weight:bold;background:#eef4ff;border:1.5px solid #1d4ed8;color:#1d4ed8;}" +
+    ".pay-total th{background:#dbe6ff;color:#1a2b4a;}" +
     ".sign{border:2px solid #0e7a5f;padding:6px 9px;margin-top:4px;page-break-inside:avoid;}.sign .st{font-weight:bold;color:#0e7a5f;margin-bottom:3px;}" +
     ".chk{margin:3px 0;}.sign-row{display:flex;gap:22px;margin-top:8px;}.sign-cell{flex:1;}.sign-cell .lbl{font-size:8.5px;color:#555;}.sign-line{border-bottom:1.5px solid #333;height:20px;}" +
     ".layout-block{margin-bottom:6px;}.layout-cap{font-size:9.5px;font-weight:bold;color:#444;margin-bottom:2px;}" +
@@ -279,17 +271,20 @@ function renderConfirmationHtml_(variant, d, venue) {
     '<div class="sec">◆標準オプション（全会場共通）</div>' +
     '<div style="font-size:10px;color:#666;margin-bottom:3px">スペース延長系は単価未確定(当日手入力)。ゴミ処理・飲み放題は税別・会場により編集可。数量・税抜合計は当日記入。</div>' +
     '<table class="fee"><thead><tr><th>品目</th><th style="width:100px">単価</th><th style="width:70px">数量</th><th style="width:70px">税表記</th></tr></thead><tbody>' + (stdRows || '<tr><td colspan="4" style="text-align:center;color:#888">データなし</td></tr>') + '</tbody></table>' +
-    '<div class="maintnote">◆維持管理費（税込・自動計算）：標準オプション＋自由記述オプションの税抜合計×5% ＝ <b>¥' + maintFee.toLocaleString() + '</b></div>' +
+    (mgmtFeeOn ? '<div class="maintnote">◆維持管理費（税込）：標準オプション＋自由記述オプションの税抜合計×5% ＝ ¥＿＿＿＿＿＿＿＿（当日記入）</div>' : '') +
     '<div class="sec">◆その他オプション（自由記述）</div>' +
     '<table class="fee"><thead><tr><th>品目</th><th style="width:100px">単価</th><th style="width:70px">数量</th><th style="width:70px">税表記</th></tr></thead><tbody>' + (freeRows || '<tr><td colspan="4" style="text-align:center;color:#888">なし</td></tr>') + '</tbody></table>' +
     '<div class="maintnote" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span>◆追加料金 合計金額（標準+自由記述オプション・税抜、当日計算して記載）＝</span><span style="border:1px solid #333;min-width:110px;display:inline-block;padding:1px 8px">￥</span></div>' +
+    '<div class="pay-group">' +
     '<div class="sec">◆お支払い状況</div><table>' +
       '<tr><th class="k">事前確定金額</th><td>' + money_(d.preConfirmed) + '</td><th class="k">事前支払額</th><td>' + money_(d.prePaid) + '</td></tr>' +
-      '<tr><th class="k">(A)未精算額</th><td>' + money_(d.balance) + '</td><th class="k">支払期限</th><td>' + ce_(d.payDue || '') + '</td></tr>' +
-      '<tr><th class="k">事前確定分 支払方法</th><td>' + ce_(d.prePayMethod || '') + '</td><th class="k">追加分 支払方法</th><td>' + ce_(d.addPayMethod || '') + '</td></tr></table>' +
+      '<tr><th class="k">(A)未精算額</th><td>' + money_(balanceVal) + '</td><th class="k">支払期限</th><td>' + ce_(d.payDue || '') + '</td></tr>' +
+      '<tr><th class="k">事前確定分 支払方法</th><td>' + ce_(d.prePayMethod || '') + '</td><th class="k">追加分 支払方法</th><td>' + ce_(d.addPayMethod || '') + '</td></tr>' +
+      '<tr class="pay-total"><th class="k">合計お支払い金額</th><td colspan="3">追加料金合計金額 ¥＿＿＿＿＿＿＿＿　＋　<span style="color:#c0392b">(A)事前確定分未精算額 ¥' + balanceVal.toLocaleString() + '</span>　＝　¥＿＿＿＿＿＿＿＿</td></tr></table>' +
     (payNote ? '<div class="paynote">■ お支払いに関するご案内\n' + ce_(payNote) + '</div>' : '') +
     receiptBlock +
     signBlock +
+    '</div>' +
     '<div class="foot">本書はTSCM管理ボードの入力内容をもとに自動生成されました（' +
       (isStaff ? 'スタッフ用・社内' : 'サイン用・お客様控') + '）。<br>' + ce_(venueName) +
       '／株式会社あどばる</div>' +
