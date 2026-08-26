@@ -191,7 +191,7 @@ function writeCtl(el,v){
 function snapshot(){
   const b=activeBlock();
   if(!document.querySelector('#hearing [data-item]'))return;
-  const vals={},memos={};
+  const vals={},memos={},sectionMemos={};
   document.querySelectorAll('#hearing [data-item]').forEach(el=>{
     const it=el.getAttribute('data-item');
     vals[it]=readCtl(el);
@@ -199,13 +199,15 @@ function snapshot(){
     const mm=fl?fl.querySelector('.memo'):null;
     memos[it]=mm?mm.value:'';
   });
-  b.snap={vals,memos};
+  document.querySelectorAll('#hearing [data-sectionmemo]').forEach(el=>{sectionMemos[el.getAttribute('data-sectionmemo')]=el.value;});
+  b.snap={vals,memos,sectionMemos};
 }
-function blankSnap(){const vals={},memos={};HEARING.forEach(s=>s.items.forEach(it=>{vals[it.item]='';memos[it.item]='';}));return {vals,memos};}
+function blankSnap(){const vals={},memos={};HEARING.forEach(s=>s.items.forEach(it=>{vals[it.item]='';memos[it.item]='';}));return {vals,memos,sectionMemos:{}};}
 function restore(snap){
   if(!snap)return;
   Object.keys(snap.vals).forEach(it=>{const el=getEl(it);if(el)writeCtl(el,snap.vals[it]);});
   Object.keys(snap.memos||{}).forEach(it=>{const el=getEl(it);if(el){const mm=el.closest('.field').querySelector('.memo');if(mm)mm.value=snap.memos[it];}});
+  Object.keys(snap.sectionMemos||{}).forEach(cat=>{const el=sectionMemoEl_(cat);if(el)el.value=snap.sectionMemos[cat];});
 }
 function renderVenueBar(){
   const b=activeBlock();
@@ -306,7 +308,7 @@ function renderHearing(){
     html+=`<div class="cat"><div class="head" style="background:${catColor(secIdx)}" data-toggle>
       <span>${esc(sec.cat)}</span><span class="count">（${sec.items.length}項目）</span><span class="chev">▾</span></div>
       <div class="body">${metaVenueRow}${rows}
-      <div class="row" style="border:none"><div class="lbl">セクションメモ</div><div class="field"><textarea class="memo" placeholder="このセクション共通の補足メモ…"></textarea></div></div></div></div>`;
+      <div class="row" style="border:none"><div class="lbl">セクションメモ</div><div class="field"><textarea class="memo" data-sectionmemo="${esc(sec.cat)}" placeholder="このセクション共通の補足メモ…"></textarea></div></div></div></div>`;
   });
   html+=`<div class="cat"><div class="head" style="background:${catColor(HEARING.length)}" data-toggle>
     <span>会場固有オプション</span><span class="count" id="hearingFreeCount">（0件）</span><span class="chev">▾</span></div>
@@ -352,6 +354,18 @@ function applyCatering(){
 }
 function q(item){const el=getEl(item);if(!el)return '';return readCtl(el).trim();}
 function qmemo(item){const el=getEl(item);if(!el)return '';const fl=el.closest('.field');const mm=fl?fl.querySelector('.memo'):null;return mm?mm.value.trim():'';}
+// 各カテゴリ末尾の「セクションメモ」欄(項目に紐付かないカテゴリ共通メモ)を取得する。GPCMボードと共通仕様。
+function sectionMemoEl_(cat){return [...document.querySelectorAll('#hearing [data-sectionmemo]')].find(e=>e.getAttribute('data-sectionmemo')===cat);}
+function sectionMemo_(cat){const el=sectionMemoEl_(cat);return el?el.value.trim():'';}
+// TSCMはGPCMと違い会場非依存の単一マスタで①②③④⑤のような固定カテゴリを持たないため、
+// 「ケータリング」カテゴリのみ〇飲食提供重要事項、それ以外の全カテゴリを〇会場貸出重要事項に
+// 割り当てる(GPCMの「④飲食利用内容のみ飲食、それ以外は会場貸出」という区分をカテゴリ名で踏襲)。
+function foodServiceNotes_(){return sectionMemo_('ケータリング');}
+function venueRentalNotes_(){
+  const lines=[];
+  HEARING.forEach(sec=>{if(sec.cat==='ケータリング')return;const m=sectionMemo_(sec.cat);if(m)lines.push(m);});
+  return lines.join('\n');
+}
 // 本予約サマリー(テキスト出力)。GPCMボードのbuildOutput()と同じ「【カテゴリ】＋
 // ・項目：値」形式の箇条書きスタイルに統一した(2026-08-19、以前は項目/内容/メモの
 // タブ区切りでHEARINGを網羅的に書き出す汎用形式だったが、GPCMボードと体裁が
@@ -400,6 +414,10 @@ function buildOutput(includeHeader){
     L.push('');L.push('【会場固有オプション】');
     freeOn.forEach(o=>L.push('・'+(o.name||'(品目名未入力)')+'：あり'));
   }
+  const venueNotes=venueRentalNotes_();
+  if(venueNotes){L.push('');L.push('【会場貸出重要事項】');venueNotes.split('\n').forEach(x=>L.push(x));}
+  const foodNotes=foodServiceNotes_();
+  if(foodNotes){L.push('');L.push('【飲食提供重要事項】');foodNotes.split('\n').forEach(x=>L.push(x));}
   return L.join('\n');
 }
 function doExport(){document.getElementById('outText').value=buildOutput();}
@@ -496,8 +514,8 @@ function tmplIsshukan_(){
     +'〇ファーストドリンク用意希望：  あり or なし  【ビール ●個・ハイボール ●個・ウーロン茶 ●個・ジンジャーエール ●個】\n'
     +'〇レイアウト：デフォルト/立食/着席 \n※この時点でなるべくレイアウト図をもらって案件アプリにはる！\n'
     +'〇支払い方法：'+payMethodText_()+'\n'
-    +'〇飲食提供重要事項：\n'
-    +'〇会場貸出重要事項：'
+    +'〇飲食提供重要事項：'+(foodServiceNotes_()?('\n'+foodServiceNotes_()):'')+'\n'
+    +'〇会場貸出重要事項：'+(venueRentalNotes_()?('\n'+venueRentalNotes_()):'')
     +shimbashi;
 }
 // 「〇共有事項」には③利用確認書タブの「◆立会スタッフ共有事項」欄の内容(プレーン
