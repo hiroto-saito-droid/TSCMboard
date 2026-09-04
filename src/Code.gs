@@ -87,9 +87,16 @@ function apiExtractMitsumoriAmount(base64Data, fileName) {
  * この関数を使わないルートも含めてWebアプリ全体が訪問者側にHTTP 403を返してしまう
  * ため、必ずデプロイ前にこの手順を済ませること。GPCMボードで実際に発生・確認済み)。
  */
-function authorizeMitsumoriOcr_() {
-  var props = PropertiesService.getScriptProperties();
-  return 'OK: Drive=' + (typeof Drive) + ' externalRequestScopeCheck=' + (typeof UrlFetchApp);
+function authorizeMitsumoriOcr() {
+  // 末尾に_が付く関数名はApps Scriptエディタの「実行する関数」ドロップダウンに
+  // 表示されないため(GPCMボードでも同じ現象を確認)、この関数だけは意図的に
+  // 末尾の_を付けていない。実際にDrive Advanced Service・UrlFetchAppを呼び出す
+  // ことで、権限確認ダイアログを確実に表示させる(typeof等の参照だけでは
+  // 権限確認が走らないため)。
+  var driveResult = Drive.Files.list({ pageSize: 1 });
+  var fetchResult = UrlFetchApp.fetch('https://www.google.com', { muteHttpExceptions: true });
+  return 'OK: Drive一覧取得件数=' + (driveResult.files ? driveResult.files.length : 0) +
+    ' / 外部リクエストHTTPステータス=' + fetchResult.getResponseCode();
 }
 
 /**
