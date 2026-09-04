@@ -815,9 +815,44 @@ const payOptHtml=(a,sel)=>a.map(o=>`<option ${o===sel?'selected':''}>${o}</optio
 // のあり/なし切替等)にvalue=""へ戻ってしまい入力内容がPDFへ反映されないバグがあったため、
 // ブロックごとの状態(b.conf)に保持し、再描画のたびに復元する方式に変更した。
 function ensureConf_(b){
-  if(!b.conf)b.conf={attendant:'',preConfirmed:'',prePaid:'',balance:'',payDue:'',prePayMethod:'',addPayMethod:'',receiptName:'',receiptAddress:'',summaryHtml:null,staffHtml:null,mgmtFee:'あり'};
+  if(!b.conf)b.conf={attendant:'',preConfirmed:'',prePaid:'',balance:'',payDue:'',prePayMethod:'',addPayMethod:'',receiptName:'',receiptAddress:'',summaryHtml:null,staffHtml:null,mgmtFee:'あり',mitsumoriItems:[]};
   if(!b.conf.mgmtFee)b.conf.mgmtFee='あり';
+  if(!b.conf.mitsumoriItems)b.conf.mitsumoriItems=[];
   return b.conf;
+}
+// 見積書PDFから自動抽出した品目内訳を編集可能な一覧として表示する(GPCMボードから
+// 移植)。OCRの誤読等で金額が違う場合はその場で直接書き換えられ、✕で行削除、
+// 「＋行を追加」で見積書に無い品目を手動追加できる(すべてcf.mitsumoriItemsを
+// 直接書き換え、スタッフ用PDFの「◆見積書内訳」にそのまま反映される)。
+function renderMitsumoriItemsList_(cf){
+  const el=document.getElementById('confMitsumoriItemsList');
+  if(!el)return;
+  const items=cf.mitsumoriItems||[];
+  const rowHtml=(it,idx)=>`<tr style="border-bottom:1px solid #e2e8f0">
+      <td style="padding:2px 4px"><input class="mitsu-f" data-idx="${idx}" data-k="name" value="${esc(it.name||'')}" style="width:100%;border:1px solid #cbd5e1;border-radius:4px;padding:2px 4px;font-size:12px"></td>
+      <td style="padding:2px 4px"><input class="mitsu-f" data-idx="${idx}" data-k="qty" value="${esc(it.qty||'')}" style="width:40px;border:1px solid #cbd5e1;border-radius:4px;padding:2px 4px;font-size:12px;text-align:right"></td>
+      <td style="padding:2px 4px"><input class="mitsu-f" data-idx="${idx}" data-k="unit" value="${esc(it.unit||'')}" style="width:40px;border:1px solid #cbd5e1;border-radius:4px;padding:2px 4px;font-size:12px"></td>
+      <td style="padding:2px 4px">￥<input class="mitsu-f" data-idx="${idx}" data-k="unitPrice" value="${esc(it.unitPrice||'')}" style="width:70px;border:1px solid #cbd5e1;border-radius:4px;padding:2px 4px;font-size:12px;text-align:right"></td>
+      <td style="padding:2px 4px">￥<input class="mitsu-f" data-idx="${idx}" data-k="amount" value="${esc(it.amount||'')}" style="width:70px;border:1px solid #cbd5e1;border-radius:4px;padding:2px 4px;font-size:12px;text-align:right"></td>
+      <td style="padding:2px 4px"><button type="button" class="mitsu-del" data-idx="${idx}" style="border:none;background:#fee2e2;color:#dc2626;border-radius:4px;padding:2px 8px;cursor:pointer">✕</button></td>
+    </tr>`;
+  el.innerHTML=(items.length?'<div style="font-size:11px;color:#64748b;margin:6px 0 2px">見積書内訳（金額を直接修正・✕で削除できます。ここでの内容がそのままスタッフ用PDFに反映されます）</div>'+
+    '<table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="color:#64748b;font-size:11px"><th style="text-align:left">品目</th><th>数量</th><th>単位</th><th>単価</th><th>金額</th><th></th></tr></thead><tbody>'+
+    items.map(rowHtml).join('')+
+    '</tbody></table>':'')+
+    '<button type="button" id="mitsuAddRow" style="margin-top:4px;border:1px dashed #94a3b8;background:#fff;color:#334155;border-radius:4px;padding:3px 10px;font-size:12px;cursor:pointer">＋行を追加</button>';
+  el.querySelectorAll('.mitsu-f').forEach(inp=>inp.oninput=()=>{
+    items[+inp.dataset.idx][inp.dataset.k]=inp.value;
+  });
+  el.querySelectorAll('.mitsu-del').forEach(btn=>btn.onclick=()=>{
+    cf.mitsumoriItems.splice(+btn.dataset.idx,1);
+    renderMitsumoriItemsList_(cf);
+  });
+  const addBtn=document.getElementById('mitsuAddRow');
+  if(addBtn)addBtn.onclick=()=>{
+    cf.mitsumoriItems.push({name:'',qty:'',unit:'',unitPrice:'',amount:''});
+    renderMitsumoriItemsList_(cf);
+  };
 }
 // (A)事前確定分未精算額＝事前確定金額－事前支払額のみ自動計算する(事前確定・
 // 事前支払額は当日ではなく事前に確定している金額のため)。合計お支払い金額は
@@ -950,7 +985,15 @@ function renderConfirmation(){
     <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税表記</th><th></th></tr></thead><tbody id="freeFeeTbody">${freeRows||'<tr><td colspan="5" style="text-align:center;color:#64748b">「あり」の会場固有オプションはありません</td></tr>'}</tbody></table>
     <div style="font-size:11px;color:#334155;margin-top:8px;padding:8px 10px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>◆追加料金 合計金額（標準+自由記述オプション・税抜、当日計算して記載）＝</span><span id="feeSubtotalText" style="border-bottom:1.5px solid #64748b;min-width:140px;display:inline-block;padding:2px 6px;background:#fff">￥</span></div>
     <button type="button" class="toolbtn sec" onclick="addFreeFeeRow()" style="margin-top:8px">＋ 品目を追加</button></div>
-  <div class="cfg"><h3>◆お支払い状況</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">事前確定金額・事前支払額は数字だけ入力すれば自動でカンマ区切り表示になります。(A)未精算額は自動計算です。合計お支払い金額は追加料金合計の確定後に手計算・記入してください。</div><div class="grid2">
+  <div class="cfg"><h3>◆お支払い状況</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">事前確定金額・事前支払額は数字だけ入力すれば自動でカンマ区切り表示になります。(A)未精算額は自動計算です。合計お支払い金額は追加料金合計の確定後に手計算・記入してください。</div>
+    <div class="inl" style="margin-bottom:8px;flex-wrap:wrap;gap:8px">
+      <label class="inl" style="font-size:12px">見積書PDF(ジョブカン)から事前確定金額を取得
+        <input type="file" id="confMitsumoriPdf" accept="application/pdf" style="margin-left:6px">
+      </label>
+      <span id="confMitsumoriStatus" style="font-size:12px;color:#64748b"></span>
+      <div id="confMitsumoriItemsList" style="width:100%"></div>
+    </div>
+    <div class="grid2">
     <label class="inl">事前確定金額 <input id="confPreConfirmed" type="text" value="${cf.preConfirmed?'￥'+Number(String(cf.preConfirmed).replace(/[,¥\s]/g,'')||0).toLocaleString():''}" placeholder="数字のみ入力"></label><label class="inl">事前支払額 <input id="confPrePaid" type="text" value="${cf.prePaid?'￥'+Number(String(cf.prePaid).replace(/[,¥\s]/g,'')||0).toLocaleString():''}" placeholder="数字のみ入力"></label>
     <label class="inl">(A)事前確定分未精算額（自動計算） <input id="confBalance" type="text" value="￥${Number(cf.balance||0).toLocaleString()}" readonly style="background:#f1f5f9;color:#64748b;cursor:not-allowed"></label><label class="inl">支払期限 <input id="confPayDue" type="date" value="${esc(cf.payDue)}"></label>
     <label class="inl">事前確定分の支払方法 <select id="prePay" onchange="updatePayNote()">${payOptHtml(PAY_PRE,cf.prePayMethod)}</select></label>
@@ -987,6 +1030,44 @@ function renderConfirmation(){
   document.getElementById('confPreConfirmed').oninput=e=>{formatMoneyInput_(e.target,raw=>{cf.preConfirmed=raw;refreshPaySummary_();});};
   document.getElementById('confPrePaid').oninput=e=>{formatMoneyInput_(e.target,raw=>{cf.prePaid=raw;refreshPaySummary_();});};
   document.getElementById('confPayDue').oninput=e=>{cf.payDue=e.target.value;};
+  // 見積書PDF(ジョブカン発行)から「御見積金額」をOCR抽出し、事前確定金額欄へ自動反映する
+  // (GPCMボードから移植)。
+  const mitsuEl=document.getElementById('confMitsumoriPdf');
+  if(mitsuEl)mitsuEl.onchange=()=>{
+    const f=mitsuEl.files[0];
+    const statusEl=document.getElementById('confMitsumoriStatus');
+    if(!f||!statusEl)return;
+    if(f.type!=='application/pdf'){statusEl.textContent='PDFファイルを選択してください';statusEl.style.color='#dc2626';return;}
+    statusEl.textContent='読み取り中…（数十秒かかる場合があります）';statusEl.style.color='#64748b';
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const base64=String(reader.result).split(',')[1]||'';
+      google.script.run
+        .withSuccessHandler(res=>{
+          if(res&&res.ok){
+            const pcEl=document.getElementById('confPreConfirmed');
+            if(pcEl)pcEl.value='￥'+Number(res.amount).toLocaleString();
+            cf.preConfirmed=res.amount;
+            cf.mitsumoriItems=res.items||[];
+            renderMitsumoriItemsList_(cf);
+            refreshPaySummary_();
+            const itemsNote=cf.mitsumoriItems.length?('／内訳'+cf.mitsumoriItems.length+'件をスタッフ用PDFに反映します'):'';
+            statusEl.textContent='取得しました：￥'+Number(res.amount).toLocaleString()+itemsNote+'（内容をご確認ください）';
+            statusEl.style.color='#15803d';
+          }else{
+            statusEl.textContent=(res&&res.error)||'取得に失敗しました。手入力をお願いします。';
+            statusEl.style.color='#dc2626';
+          }
+        })
+        .withFailureHandler(err=>{
+          statusEl.textContent='取得に失敗しました：'+err+'（手入力をお願いします）';
+          statusEl.style.color='#dc2626';
+        })
+        .apiExtractMitsumoriAmount(base64,f.name);
+    };
+    reader.readAsDataURL(f);
+  };
+  renderMitsumoriItemsList_(cf);
   document.getElementById('mgmtFeeSel').addEventListener('change',e=>{cf.mgmtFee=e.target.value;renderConfirmation();});
   document.getElementById('prePay').addEventListener('change',e=>{cf.prePayMethod=e.target.value;});
   document.getElementById('addPay').addEventListener('change',e=>{cf.addPayMethod=e.target.value;});
@@ -1046,7 +1127,8 @@ function collectConfPayload_(variant){
     mgmtFee:cf.mgmtFee,
     preConfirmed:cf.preConfirmed,prePaid:cf.prePaid,balance:cf.balance,payDue:cf.payDue,
     receiptName:cf.receiptName,receiptAddress:cf.receiptAddress,
-    prePayMethod:cf.prePayMethod,addPayMethod:cf.addPayMethod};
+    prePayMethod:cf.prePayMethod,addPayMethod:cf.addPayMethod,
+    mitsumoriItems:cf.mitsumoriItems||[]};
 }
 function makeConfPdf(variant){
   const d=collectConfPayload_(variant);

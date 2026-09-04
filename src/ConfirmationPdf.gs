@@ -205,6 +205,20 @@ function renderConfirmationHtml_(variant, d, venue) {
       staffShareBody + '</div>'
     : '';
 
+  // 見積書PDF(ジョブカン)から自動抽出した品目内訳(一人あたりの金額＝単価を含む)。
+  // 社内参考情報のためスタッフ用PDFにのみ出す(お客様控には含めない。GPCMボードから移植)。
+  var mitsumoriItems = d.mitsumoriItems || [];
+  var mitsumoriBlock = (isStaff && mitsumoriItems.length)
+    ? '<div class="sec">◆見積書内訳（スタッフ用参考・見積書PDFより自動取得）</div>' +
+      '<table class="fee"><thead><tr><th>品目</th><th style="width:50px">数量</th><th style="width:45px">単位</th><th style="width:90px">単価(一人あたり等)</th><th style="width:90px">金額</th></tr></thead><tbody>' +
+      mitsumoriItems.map(function (it) {
+        return '<tr><td>' + ce_(it.name || '') + '</td><td style="text-align:right">' + ce_(it.qty || '') +
+          '</td><td>' + ce_(it.unit || '') + '</td><td style="text-align:right">' + money_(it.unitPrice) +
+          '</td><td style="text-align:right">' + money_(it.amount) + '</td></tr>';
+      }).join('') +
+      '</tbody></table>'
+    : '';
+
   var signBlock = !isStaff
     ? '<div class="sec sign">担当者確認欄</div>' +
       '<div class="sign"><div class="st">ご確認・ご署名</div>' +
@@ -268,6 +282,7 @@ function renderConfirmationHtml_(variant, d, venue) {
     '<div class="sec">ご成約内容サマリー</div><div class="summary">' +
       (d.summaryHtml != null ? sanitizeRichHtml_(d.summaryHtml) : ce_(d.summary || '')) + '</div>' +
     staffShare +
+    mitsumoriBlock +
     '<div class="sec">◆標準オプション（全会場共通）</div>' +
     '<div style="font-size:10px;color:#666;margin-bottom:3px">スペース延長系は単価未確定(当日手入力)。ゴミ処理・飲み放題は税別・会場により編集可。数量・税抜合計は当日記入。</div>' +
     '<table class="fee"><thead><tr><th>品目</th><th style="width:100px">単価</th><th style="width:70px">数量</th><th style="width:70px">税表記</th></tr></thead><tbody>' + (stdRows || '<tr><td colspan="4" style="text-align:center;color:#888">データなし</td></tr>') + '</tbody></table>' +
