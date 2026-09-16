@@ -388,7 +388,7 @@ function buildOutput(includeHeader){
   if(b.venueAddress)L.push('会場住所：'+b.venueAddress);
   L.push('会社名：'+q('会社名'));
   L.push('担当者：'+withSama(q('担当者')));
-  const d=q('日付'),tm=q('時間');
+  const d=q('利用日'),tm=q('利用時間');
   L.push('ご予約日時：'+d+(tm?' '+tm:''));
   const headcount=q('来場人数');
   L.push('人数：'+(headcount?headcount+'名':''));
@@ -465,7 +465,7 @@ function cateringSchedule_(){
 }
 function tmplHoukoku_(){
   const b=activeBlock();
-  const dateTime=formatDateJp_(q('日付'))+(q('時間')||'〇〇：〇〇～〇〇：〇〇');
+  const dateTime=formatDateJp_(q('利用日'))+(q('利用時間')||'〇〇：〇〇～〇〇：〇〇');
   const mealR=parseTimeRangeStr_(q('食事プラン（提供時間帯）'));
   const drinkR=parseTimeRangeStr_(q('ドリンクタイプ（提供時間帯）'));
   return '※成約報告\n\nお疲れ様です。\n本件、成約となりました。\n\n'
@@ -485,7 +485,7 @@ function tmplHoukoku_(){
 }
 function tmplIsshukan_(){
   const b=activeBlock();
-  const dateTime=formatDateJp_(q('日付'))+(q('時間')||'');
+  const dateTime=formatDateJp_(q('利用日'))+(q('利用時間')||'');
   const mealPlan=q('食事プラン');
   const mealLine=mealPlan?mealPlan+'プラン':'●●プラン（●● 品）※前のプラン場合は旧記載をする';
   const drinkType=q('ドリンクタイプ');
@@ -555,7 +555,7 @@ function tomorrowJp_(){
 function tmplYoyakuFlow_(){
   const b=activeBlock();
   const venueName=b.venueName||'';
-  const dateTime=formatDateJp_(q('日付'))+(q('時間')||'〇〇：〇〇～〇〇：〇〇');
+  const dateTime=formatDateJp_(q('利用日'))+(q('利用時間')||'〇〇：〇〇～〇〇：〇〇');
   const cateringKind=q('ケータリング区分');
   let cateringBlock='';
   if(cateringKind&&cateringKind!=='なし'){
@@ -615,7 +615,7 @@ function tmplYoyakuFlow_(){
     +'②カード決済（決済URLよりカード情報入力後、承認していただき決済完了となります。）\n'
     +'③請求書払い（与信審査あり）　※ビジネスアカウント登録者限定\n'
     +'--------------------------------------\n\n'
-    +'【４】ご利用日1週間前（'+oneWeekBeforeBizDay_(q('日付'))+'17:00）までにご連絡いただく内容\n'
+    +'【４】ご利用日1週間前（'+oneWeekBeforeBizDay_(q('利用日'))+'17:00）までにご連絡いただく内容\n'
     +'　※想定でお話ししました内容（見積書URL：'+qmemo('見積送付')+'）をもとに以下に記載しております。\n\n'
     +cateringBlock+'\n'
     +'【ドリンク傾向アンケート】\n'
@@ -783,7 +783,7 @@ function renderLayout(){
 function collectLayoutPdfPayload_(){
   const b=activeBlock();const imgs=b.layoutImgs||{};const memo=b.layoutMemo||{};const nextOn=!!b.layoutNextEnabled;
   return {venueName:b.venueName||'',venueAddress:b.venueAddress||'',company:q('会社名'),client:q('担当者'),
-    useDate:q('日付'),useTime:q('時間'),
+    useDate:q('利用日'),useTime:q('利用時間'),
     layoutDayImg:imgs.day?imgs.day.data:'',layoutDayMemo:memo.day||'',
     layoutNextImg:(nextOn&&imgs.next)?imgs.next.data:'',layoutNextMemo:nextOn?(memo.next||''):''};
 }
@@ -968,7 +968,7 @@ function renderConfirmation(){
   <div class="banner">利用確認書（会場：<b>${esc(b.venueName||'(会場未入力)')}</b>${b.venueAddress?'　'+esc(b.venueAddress):''}）。</div>
   <div class="cfg"><h3>ヘッダ・ご利用内容</h3><div class="grid2">
     <label class="inl">立会担当 <input id="confAttendant" type="text" value="${esc(cf.attendant)}" style="flex:1;min-width:200px"></label><label class="inl">営業担当（①ヒアリングシートから自動反映） <input id="confSalesRep" type="text" value="${esc(q('営業担当')||'')}" readonly style="flex:1;min-width:200px;background:#f1f5f9;color:#64748b;cursor:not-allowed"></label>
-    <label class="inl">利用日（①ヒアリングシートから自動反映） <input id="confUseDate" type="text" value="${esc(q('日付')||'')}" readonly style="background:#f1f5f9;color:#64748b;cursor:not-allowed"></label><label class="inl">利用時間（①ヒアリングシートから自動反映） <input id="confUseTime" type="text" value="${esc(q('時間')||'')}" readonly style="background:#f1f5f9;color:#64748b;cursor:not-allowed"></label></div></div>
+    <label class="inl">利用日（①ヒアリングシートから自動反映） <input id="confUseDate" type="text" value="${esc(q('利用日')||'')}" readonly style="background:#f1f5f9;color:#64748b;cursor:not-allowed"></label><label class="inl">利用時間（①ヒアリングシートから自動反映） <input id="confUseTime" type="text" value="${esc(q('利用時間')||'')}" readonly style="background:#f1f5f9;color:#64748b;cursor:not-allowed"></label></div></div>
   <div class="cfg"><h3>ご成約内容サマリー（テキスト出力を反映・編集可／太字・文字色を選択して変更可）</h3>
     <div class="richbar">${richToolbarHtml()}
       <button class="toolbtn" onclick="refreshSeiyakuSummary_()">🔄 テキスト出力を反映</button>
@@ -1120,7 +1120,7 @@ function collectConfPayload_(variant){
   return {variant:variant,venueName:b.venueName||'',venueAddress:b.venueAddress||'',
     salesRep:q('営業担当'),attendant:cf.attendant,
     company:q('会社名'),client:q('担当者'),site:q('予約サイト'),
-    useDate:q('日付'),useTime:q('時間'),headcount:withN(q('来場人数')),
+    useDate:q('利用日'),useTime:q('利用時間'),headcount:withN(q('来場人数')),
     summaryHtml:variant==='sign'?signSummary:document.getElementById('seiyakuSummary').innerHTML,
     staffShareHtml:document.getElementById('staffShareEdit').innerHTML,
     standardFees:ensureStandardFees_(b),freeFees:ensureFreeFees_(b).filter(freeFeeOn_),
@@ -1147,8 +1147,8 @@ function renderAll(){renderVenueBar();renderHearing();renderLayout();renderConfi
 // renderConfirmation()は呼ばずこの2項目だけ更新する)。
 function syncConfUseDateTime_(){
   const d=document.getElementById('confUseDate'),t=document.getElementById('confUseTime');
-  if(d)d.value=q('日付')||'';
-  if(t)t.value=q('時間')||'';
+  if(d)d.value=q('利用日')||'';
+  if(t)t.value=q('利用時間')||'';
 }
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.pane').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.tab).classList.add('active');if(b.dataset.tab==='confirmation')syncConfUseDateTime_();});
 
