@@ -159,7 +159,9 @@ function confFeeRowHtml_(o) {
     ? '<span style="background:#eef2ff;color:#3730a3;border:1px solid #a5b4fc;border-radius:4px;padding:0 5px;font-size:9.5px">税込</span>'
     : '<span style="background:#fff7ed;color:#9a3412;border:1px solid #fdba74;border-radius:4px;padding:0 5px;font-size:9.5px">税別</span>';
   var unit = o.unit ? ('（' + ce_(o.unit) + '）') : '';
-  return '<tr><td>' + ce_(o.name) + unit + '</td><td class="r">' + price + '</td><td class="r">' + qty + '</td><td class="r">' + taxBadge + '</td></tr>';
+  var hasBoth = (o.price !== '' && o.price != null && o.qty !== '' && o.qty != null);
+  var sub = hasBoth ? '¥' + (om_num_(o.price) * om_num_(o.qty)).toLocaleString() : '';
+  return '<tr><td>' + ce_(o.name) + unit + ' ' + taxBadge + '</td><td class="r">' + price + '</td><td class="r">' + qty + '</td><td class="r">' + sub + '</td></tr>';
 }
 
 /** 維持管理費(5%)算出前の、標準+自由記述オプションの単純合計(税抜・税込問わず)。 */
@@ -283,13 +285,19 @@ function renderConfirmationHtml_(variant, d, venue) {
       (d.summaryHtml != null ? sanitizeRichHtml_(d.summaryHtml) : ce_(d.summary || '')) + '</div>' +
     staffShare +
     mitsumoriBlock +
-    '<div class="sec">◆標準オプション（全会場共通）</div>' +
-    '<div style="font-size:10px;color:#666;margin-bottom:3px">スペース延長系は単価未確定(当日手入力)。ゴミ処理・飲み放題は税別・会場により編集可。数量・税抜合計は当日記入。</div>' +
-    '<table class="fee"><thead><tr><th>品目</th><th style="width:100px">単価</th><th style="width:70px">数量</th><th style="width:70px">税表記</th></tr></thead><tbody>' + (stdRows || '<tr><td colspan="4" style="text-align:center;color:#888">データなし</td></tr>') + '</tbody></table>' +
-    (mgmtFeeOn ? '<div class="maintnote">◆維持管理費（税込）：標準オプション＋自由記述オプションの税抜合計×5% ＝ ¥＿＿＿＿＿＿＿＿（当日記入）</div>' : '') +
-    '<div class="sec">◆その他オプション（自由記述）</div>' +
-    '<table class="fee"><thead><tr><th>品目</th><th style="width:100px">単価</th><th style="width:70px">数量</th><th style="width:70px">税表記</th></tr></thead><tbody>' + (freeRows || '<tr><td colspan="4" style="text-align:center;color:#888">なし</td></tr>') + '</tbody></table>' +
-    '<div class="maintnote" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span>◆追加料金 合計金額（標準+自由記述オプション・税抜、当日計算して記載）＝</span><span style="border:1px solid #333;min-width:110px;display:inline-block;padding:1px 8px">￥</span></div>' +
+    '<div class="sec">◆追加料金</div>' +
+    '<div style="font-size:10px;color:#666;margin-bottom:3px">スペース延長系は単価未確定(当日手入力)。数量・税抜合計は当日記入。当日追加分合計・維持管理費・消費税・合計金額は当日実際の数量確定後に手計算・記入するため空欄で出力されます。</div>' +
+    '<table class="fee"><thead><tr><th>品目</th><th style="width:90px">単価</th><th style="width:55px">数量</th><th style="width:90px">税抜合計</th></tr></thead><tbody>' +
+      ((stdRows + freeRows) || '<tr><td colspan="4" style="text-align:center;color:#888">データなし</td></tr>') +
+      '</tbody><tfoot>' +
+      '<tr><td colspan="2" style="text-align:right;font-weight:bold">①当日追加料金合計（税抜）</td><td style="text-align:left;font-weight:bold">¥</td></tr>' +
+      (mgmtFeeOn
+        ? '<tr><td colspan="2" style="text-align:right">②維持管理費（①×0.05）</td><td style="text-align:left">¥</td></tr>' +
+          '<tr><td colspan="2" style="text-align:right">③消費税（(①＋②)×0.1）</td><td style="text-align:left">¥</td></tr>' +
+          '<tr><td colspan="2" style="text-align:right;font-weight:bold">④合計（①＋②＋③）※税込・小数点以下切り捨て</td><td style="text-align:left;font-weight:bold">¥</td></tr>'
+        : '<tr><td colspan="2" style="text-align:right">②消費税（①×0.1）</td><td style="text-align:left">¥</td></tr>' +
+          '<tr><td colspan="2" style="text-align:right;font-weight:bold">③合計（①＋②）※税込・小数点以下切り捨て</td><td style="text-align:left;font-weight:bold">¥</td></tr>') +
+      '</tfoot></table>' +
     '<div class="pay-group">' +
     '<div class="sec">◆お支払い状況</div><table>' +
       '<tr><th class="k">事前確定金額</th><td>' + money_(d.preConfirmed) + '</td><th class="k">事前支払額</th><td>' + money_(d.prePaid) + '</td></tr>' +

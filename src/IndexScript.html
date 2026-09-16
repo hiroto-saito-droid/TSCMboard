@@ -916,46 +916,78 @@ function renderHearingFreeOptions_(){
   tbody.querySelectorAll('.hf-enabled').forEach(el=>el.onchange=()=>{free[+el.dataset.idx].enabled=(el.value==='あり');renderConfirmation();});
   tbody.querySelectorAll('.hf-del').forEach(el=>el.onclick=()=>{free.splice(+el.dataset.idx,1);renderHearingFreeOptions_();renderConfirmation();});
 }
-// 標準+自由記述オプション(維持管理費算出用の行を除く)の単価×数量の単純合計。
-// 維持管理費(5%)とは別に、追加料金全体の合計金額を確認できるようにする。
-function computeFeeSubtotal_(b){
-  const std=ensureStandardFees_(b).filter(o=>o.code!=='MAINT'&&o.kind!=='percentage');
-  const free=ensureFreeFees_(b).filter(freeFeeOn_);
-  let total=0;
-  std.forEach(o=>{total+=toNum_(o.price)*toNum_(o.qty);});
-  free.forEach(o=>{total+=toNum_(o.price)*toNum_(o.qty);});
-  return total;
-}
-// 標準オプション各行の税抜合計(単価×数量)だけを再計算して表示更新する
-// (維持管理費は当日確定後に手計算・記入するため空欄のまま自動更新しない)。
-function refreshStdFeeSubtotals_(){
+// 品目ごとの税抜合計(単価×数量、価格・数量とも入力済みの行のみ)を再計算して
+// 表示だけ更新する(renderConfirmation()を呼ぶと入力中のフォーカスが外れるため、
+// DOM直接更新にしている)。当日追加分合計・維持管理費・消費税・合計金額は、当日
+// 実際の数量確定後に手計算・記入するため空欄「￥」のまま自動計算しない
+// (GPCMボードと同方針)。#feeTbody trのdata-kind/data-idxで標準/自由記述それぞれの
+// 元配列にある実データを引き当てる。
+function refreshFeeTotal_(){
   const b=activeBlock();
-  const std=ensureStandardFees_(b).filter(o=>o.code!=='MAINT'&&o.kind!=='percentage');
-  document.querySelectorAll('#stdFeeTbody tr').forEach((tr,i)=>{
-    const cell=tr.children[3]; const o=std[i]; if(!o||!cell)return;
-    cell.textContent=(o.price!==''&&o.price!=null&&o.qty!==''&&o.qty!=null)?('¥'+(toNum_(o.price)*toNum_(o.qty)).toLocaleString()):'';
+  const bStd=ensureStandardFees_(b),freeAll=ensureFreeFees_(b);
+  document.querySelectorAll('#feeTbody tr').forEach(tr=>{
+    const o=(tr.dataset.kind==='std'?bStd:freeAll)[+tr.dataset.idx]; if(!o)return;
+    const cell=tr.querySelector('.fee-subtotal'); if(!cell)return;
+    const hasBoth=o.price!==''&&o.price!=null&&o.qty!==''&&o.qty!=null;
+    cell.textContent=hasBoth?('¥'+(toNum_(o.price)*toNum_(o.qty)).toLocaleString()):'';
   });
+}
+// 「品目を選んで追加」ピッカーから選んだ場合の処理(GPCMボードのaddFeeRowFromPicker_と同方針)。
+// 標準オプションのコードが選ばれた場合は共通オプション・料金マスタから単価等を
+// 引き直して再度b.standardFeesに追加する(×で削除済みでも元の単価で復元できる)。
+// 「その他（自由入力）」の場合は空欄の自由記述行を追加する。
+function addFeeRowFromPicker_(sel){
+  const val=sel.value; sel.selectedIndex=0;
+  if(!val)return;
+  if(val==='__other__'){addFreeFeeRow();return;}
+  const src=STANDARD_OPTIONS.find(o=>o.code===val);
+  if(src){
+    ensureStandardFees_(activeBlock()).push({code:src.code,name:src.name,kind:src.kind,price:src.price,qty:'',unit:src.unit,taxType:src.taxType,rate:src.rate});
+  }
+  renderConfirmation();
+}
+// ◆追加料金テーブルの×削除(標準オプション・自由記述オプション共通)。標準オプションは
+// 元配列から取り除くだけで、共通オプション・料金マスタ自体は変更されない
+// (「品目を選んで追加」ピッカーから同じ品目をいつでも選び直せる)。自由記述オプションは
+// ①ヒアリングシートの「会場固有オプション」欄とも連動するため、削除時にそちらの表示も更新する。
+function delFeeRow_(kind,idx){
+  const b=activeBlock();
+  if(kind==='std'){ensureStandardFees_(b).splice(idx,1);renderConfirmation();}
+  else{ensureFreeFees_(b).splice(idx,1);renderConfirmation();renderHearingFreeOptions_();}
 }
 function renderConfirmation(){
   const b=activeBlock();
-  const std=ensureStandardFees_(b).filter(o=>o.code!=='MAINT'&&o.kind!=='percentage');
-  // 「あり」の項目だけをここに表示する。編集・削除ハンドラは元の配列(freeAll)の実インデックス(_i)を使う。
+  const bStd=ensureStandardFees_(b);
   const freeAll=ensureFreeFees_(b);
-  const free=freeAll.map((o,i)=>Object.assign({},o,{_i:i})).filter(freeFeeOn_);
   const taxBadge=t=>`<span class="taxbadge ${t==='税込'?'in':'ex'}">${esc(t||'税別')}</span>`;
-  const stdRows=std.map((o,i)=>`<tr>
-    <td>${esc(o.name)}${o.unit?'（'+esc(o.unit)+'）':''} ${taxBadge(o.taxType)}</td>
-    <td style="width:110px"><input type="number" class="std-price" data-idx="${i}" value="${o.price===''||o.price==null?'':esc(o.price)}" placeholder="${o.kind==='manual'?'当日手入力':''}" style="width:100%;text-align:right"></td>
-    <td style="width:80px"><input type="number" class="std-qty" data-idx="${i}" value="${o.qty===''||o.qty==null?'':esc(o.qty)}" style="width:100%;text-align:right" placeholder="数量"></td>
-    <td style="width:110px;text-align:right;color:#94a3b8">${(o.price!==''&&o.price!=null&&o.qty!==''&&o.qty!=null)?('¥'+(toNum_(o.price)*toNum_(o.qty)).toLocaleString()):''}</td>
-  </tr>`).join('');
-  const freeRows=free.map(o=>`<tr>
-    <td><input type="text" class="free-name" data-idx="${o._i}" value="${esc(o.name)}" style="width:100%" placeholder="品目名（自由入力）"></td>
-    <td style="width:110px"><input type="number" class="free-price" data-idx="${o._i}" value="${o.price===''||o.price==null?'':esc(o.price)}" style="width:100%;text-align:right" placeholder="単価"></td>
-    <td style="width:80px"><input type="number" class="free-qty" data-idx="${o._i}" value="${o.qty===''||o.qty==null?'':esc(o.qty)}" style="width:100%;text-align:right" placeholder="数量"></td>
-    <td style="width:78px"><select class="free-tax" data-idx="${o._i}"><option ${o.taxType!=='税込'?'selected':''}>税別</option><option ${o.taxType==='税込'?'selected':''}>税込</option></select></td>
-    <td style="width:26px"><button type="button" class="free-del" data-idx="${o._i}" title="この行を削除" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px">×</button></td>
-  </tr>`).join('');
+  const feeRowHtml_=(kind,idx,o,nameCell)=>{
+    const hasBoth=o.price!==''&&o.price!=null&&o.qty!==''&&o.qty!=null;
+    const sub=hasBoth?toNum_(o.price)*toNum_(o.qty):0;
+    return `<tr data-kind="${kind}" data-idx="${idx}">
+    <td>${nameCell}</td>
+    <td style="width:110px"><input type="number" class="fee-price" data-kind="${kind}" data-idx="${idx}" value="${o.price===''||o.price==null?'':esc(o.price)}" placeholder="${o.kind==='manual'?'当日手入力':''}" style="width:100%;text-align:right"></td>
+    <td style="width:80px"><input type="number" class="fee-qty" data-kind="${kind}" data-idx="${idx}" value="${o.qty===''||o.qty==null?'':esc(o.qty)}" style="width:100%;text-align:right" placeholder="数量"></td>
+    <td class="fee-subtotal" style="width:110px;text-align:right;color:#94a3b8">${hasBoth?('¥'+sub.toLocaleString()):''}</td>
+    <td style="width:26px"><button type="button" class="fee-del" data-kind="${kind}" data-idx="${idx}" title="この行を削除" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px">×</button></td>
+  </tr>`;
+  };
+  // 標準オプションは元の配列(bStd)の実インデックスをdata-idxに保持する(×で削除した際、
+  // 「品目を選んで追加」ピッカーが共通オプション・料金マスタから同じ品目を再度追加できるようにするため)。
+  const stdRows=bStd.map((o,i)=>{
+    if(o.code==='MAINT'||o.kind==='percentage')return '';
+    return feeRowHtml_('std',i,o,`${esc(o.name)}${o.unit?'（'+esc(o.unit)+'）':''} ${taxBadge(o.taxType)}`);
+  }).join('');
+  // 「あり」の項目だけをここに表示する(元配列freeAllの実インデックスを保持)。
+  const freeRows=freeAll.map((o,i)=>{
+    if(!freeFeeOn_(o))return '';
+    const nameCell=`<input type="text" class="free-name" data-idx="${i}" value="${esc(o.name)}" style="width:60%" placeholder="品目名（自由入力）">`
+      +` <select class="free-tax" data-idx="${i}" style="width:64px"><option ${o.taxType!=='税込'?'selected':''}>税別</option><option ${o.taxType==='税込'?'selected':''}>税込</option></select>`;
+    return feeRowHtml_('free',i,o,nameCell);
+  }).join('');
+  // 「品目を選んで追加」ピッカー用: ×で削除済みの標準オプション(共通オプション・料金マスタに
+  // 存在するがbStdには無いコード)を選び直せるようにする(GPCMボードの当日追加料金表と同じ方針)。
+  const presentStdCodes=new Set(bStd.map(o=>o.code));
+  const hiddenStdOptions=STANDARD_OPTIONS.filter(o=>o.code!=='MAINT'&&o.kind!=='percentage'&&!presentStdCodes.has(o.code));
   const cf=ensureConf_(b);
   // <select>は該当するoptionが無いとブラウザが自動的に先頭を表示するが、
   // cf.prePayMethod/addPayMethodはユーザーが実際にonchangeを発火させるまで
@@ -977,14 +1009,23 @@ function renderConfirmation(){
   <div class="cfg"><h3>◆立会スタッフ共有事項（スタッフ用のみ・編集可／共有事項テンプレ／太字・文字色を選択して変更可）</h3>
     <div class="richbar">${richToolbarHtml()}</div>
     <div id="staffShareEdit" class="richedit" contenteditable="true" style="min-height:200px">${cf.staffHtml!=null?cf.staffHtml:esc(STAFF_TEMPLATE)}</div></div>
-  <div class="cfg"><h3>◆標準オプション（全会場共通）</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">スペース延長系は単価未確定(当日手入力)。ゴミ処理・飲み放題の単価はこの案件限定で編集できます（共通マスタ本体は変更されません）。数量・税抜合計は当日記入。</div>
-    <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税抜合計</th></tr></thead><tbody id="stdFeeTbody">${stdRows||'<tr><td colspan="4" style="text-align:center;color:#64748b">共通オプション・料金マスタが未取得です</td></tr>'}</tbody></table>
-    <label class="inl" style="margin-top:8px">維持管理費 <select id="mgmtFeeSel"><option value="あり" ${cf.mgmtFee==='あり'?'selected':''}>あり</option><option value="なし" ${cf.mgmtFee==='なし'?'selected':''}>なし</option></select></label>
-    ${cf.mgmtFee==='なし'?'':'<div style="font-size:11px;color:#1d4ed8;margin-top:8px;padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px">◆維持管理費（税込） ＝ 標準+自由記述オプションの税抜合計 × 5% ＝ ￥＿＿＿＿＿＿＿＿（当日記入）</div>'}</div>
-  <div class="cfg"><h3>◆その他オプション（自由記述）</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">①ヒアリングシートの「会場固有オプション」で「あり」にした項目がここに表示されます。単価・数量はここで入力してください。ここで直接追加した品目は自動的に「あり」扱いになります。</div>
-    <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税表記</th><th></th></tr></thead><tbody id="freeFeeTbody">${freeRows||'<tr><td colspan="5" style="text-align:center;color:#64748b">「あり」の会場固有オプションはありません</td></tr>'}</tbody></table>
-    <div style="font-size:11px;color:#334155;margin-top:8px;padding:8px 10px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>◆追加料金 合計金額（標準+自由記述オプション・税抜、当日計算して記載）＝</span><span id="feeSubtotalText" style="border-bottom:1.5px solid #64748b;min-width:140px;display:inline-block;padding:2px 6px;background:#fff">￥</span></div>
-    <button type="button" class="toolbtn sec" onclick="addFreeFeeRow()" style="margin-top:8px">＋ 品目を追加</button></div>
+  <div class="cfg"><h3>◆追加料金</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">単価は品目ごとに【税別/税込】表記（共通オプション・料金マスタ準拠、この案件限定で品目・単価を編集・追加・削除できます）。①ヒアリングシートの「会場固有オプション」で「あり」にした項目もここに表示されます。数量・税抜合計は当日記入。当日追加分合計・維持管理費・消費税・合計金額は当日実際の数量確定後に手計算・記入するため空欄で出力されます。</div>
+    <label class="inl" style="margin-bottom:6px">維持管理費 <select id="mgmtFeeSel"><option value="あり" ${cf.mgmtFee==='あり'?'selected':''}>あり</option><option value="なし" ${cf.mgmtFee==='なし'?'selected':''}>なし</option></select></label>
+    <table class="fee"><thead><tr><th>品目</th><th>単価</th><th>数量</th><th>税抜合計</th><th></th></tr></thead><tbody id="feeTbody">${(stdRows+freeRows)||'<tr><td colspan="5" style="text-align:center;color:#64748b">品目がありません</td></tr>'}</tbody><tfoot>
+      <tr><td colspan="3" style="text-align:right;font-weight:700">①当日追加料金合計（税抜）</td><td style="text-align:left;font-weight:700">￥</td><td></td></tr>
+      ${cf.mgmtFee==='なし'?'':'<tr><td colspan="3" style="text-align:right;color:#64748b">②維持管理費（①×0.05）</td><td style="text-align:left;color:#64748b">￥</td><td></td></tr>'}
+      <tr><td colspan="3" style="text-align:right;color:#64748b">${cf.mgmtFee==='なし'?'②消費税（①×0.1）':'③消費税（(①＋②)×0.1）'}</td><td style="text-align:left;color:#64748b">￥</td><td></td></tr>
+      <tr><td colspan="3" style="text-align:right;font-weight:700">${cf.mgmtFee==='なし'?'③合計（①＋②）':'④合計（①＋②＋③）'}※税込・小数点以下切り捨て</td><td style="text-align:left;font-weight:700">￥</td><td></td></tr>
+    </tfoot></table>
+    <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label style="font-size:12px;color:#334155">品目を選んで追加(削除した標準オプションもここから選び直せます)
+        <select onchange="addFeeRowFromPicker_(this)" style="margin-left:6px">
+          <option value="">選択してください…</option>
+          ${hiddenStdOptions.map(o=>`<option value="${esc(o.code)}">${esc(o.name)}${o.price!==''&&o.price!=null?'（¥'+Number(o.price).toLocaleString()+'）':''}</option>`).join('')}
+          <option value="__other__">その他（自由入力）</option>
+        </select>
+      </label>
+    </div></div>
   <div class="cfg"><h3>◆お支払い状況</h3><div style="font-size:11px;color:#94a3b8;margin-bottom:6px">事前確定金額・事前支払額は数字だけ入力すれば自動でカンマ区切り表示になります。(A)未精算額は自動計算です。合計お支払い金額は追加料金合計の確定後に手計算・記入してください。</div>
     <div class="inl" style="margin-bottom:8px;flex-wrap:wrap;gap:8px">
       <label class="inl" style="font-size:12px">見積書PDF(ジョブカン)から事前確定金額を取得
@@ -1019,13 +1060,11 @@ function renderConfirmation(){
     ss.oninput=()=>syncRichEdit_(ss);
   }
   const stfEl=document.getElementById('staffShareEdit'); if(stfEl)stfEl.oninput=()=>syncRichEdit_(stfEl);
-  document.querySelectorAll('.std-price').forEach(el=>el.oninput=()=>{std[+el.dataset.idx].price=el.value===''?'':(+el.value||0);refreshStdFeeSubtotals_();});
-  document.querySelectorAll('.std-qty').forEach(el=>el.oninput=()=>{std[+el.dataset.idx].qty=el.value===''?'':(+el.value||0);refreshStdFeeSubtotals_();});
+  document.querySelectorAll('.fee-price').forEach(el=>{const arr=el.dataset.kind==='std'?bStd:freeAll;el.oninput=()=>{arr[+el.dataset.idx].price=el.value===''?'':(+el.value||0);refreshFeeTotal_();};});
+  document.querySelectorAll('.fee-qty').forEach(el=>{const arr=el.dataset.kind==='std'?bStd:freeAll;el.oninput=()=>{arr[+el.dataset.idx].qty=el.value===''?'':(+el.value||0);refreshFeeTotal_();};});
   document.querySelectorAll('.free-name').forEach(el=>el.oninput=()=>{freeAll[+el.dataset.idx].name=el.value;});
-  document.querySelectorAll('.free-price').forEach(el=>el.oninput=()=>{freeAll[+el.dataset.idx].price=el.value===''?'':(+el.value||0);refreshStdFeeSubtotals_();});
-  document.querySelectorAll('.free-qty').forEach(el=>el.oninput=()=>{freeAll[+el.dataset.idx].qty=el.value===''?'':(+el.value||0);refreshStdFeeSubtotals_();});
-  document.querySelectorAll('.free-tax').forEach(el=>el.onchange=()=>{freeAll[+el.dataset.idx].taxType=el.value;refreshStdFeeSubtotals_();});
-  document.querySelectorAll('.free-del').forEach(el=>el.onclick=()=>delFreeFeeRow(+el.dataset.idx));
+  document.querySelectorAll('.free-tax').forEach(el=>el.onchange=()=>{freeAll[+el.dataset.idx].taxType=el.value;refreshFeeTotal_();});
+  document.querySelectorAll('.fee-del').forEach(el=>el.onclick=()=>delFeeRow_(el.dataset.kind,+el.dataset.idx));
   document.getElementById('confAttendant').oninput=e=>{cf.attendant=e.target.value;};
   document.getElementById('confPreConfirmed').oninput=e=>{formatMoneyInput_(e.target,raw=>{cf.preConfirmed=raw;refreshPaySummary_();});};
   document.getElementById('confPrePaid').oninput=e=>{formatMoneyInput_(e.target,raw=>{cf.prePaid=raw;refreshPaySummary_();});};
