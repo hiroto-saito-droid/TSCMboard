@@ -287,16 +287,16 @@ function renderConfirmationHtml_(variant, d, venue) {
     mitsumoriBlock +
     '<div class="sec">◆追加料金</div>' +
     '<div style="font-size:10px;color:#666;margin-bottom:3px">スペース延長系は単価未確定(当日手入力)。数量・税抜合計は当日記入。当日追加分合計・維持管理費・消費税・合計金額は当日実際の数量確定後に手計算・記入するため空欄で出力されます。</div>' +
-    '<table class="fee"><thead><tr><th>品目</th><th style="width:90px">単価</th><th style="width:55px">数量</th><th style="width:90px">税抜合計</th></tr></thead><tbody>' +
+    '<table class="fee"><thead><tr><th>品目</th><th style="width:90px">単価</th><th style="width:55px">数量</th><th style="width:100px">税抜合計</th></tr></thead><tbody>' +
       ((stdRows + freeRows) || '<tr><td colspan="4" style="text-align:center;color:#888">データなし</td></tr>') +
       '</tbody><tfoot>' +
-      '<tr><td colspan="2" style="text-align:right;font-weight:bold">①当日追加料金合計（税抜）</td><td style="text-align:left;font-weight:bold">¥</td></tr>' +
+      '<tr><td colspan="3" style="text-align:right;font-weight:bold">①当日追加料金合計（税抜）</td><td style="text-align:left;font-weight:bold">¥</td></tr>' +
       (mgmtFeeOn
-        ? '<tr><td colspan="2" style="text-align:right">②維持管理費（①×0.05）</td><td style="text-align:left">¥</td></tr>' +
-          '<tr><td colspan="2" style="text-align:right">③消費税（(①＋②)×0.1）</td><td style="text-align:left">¥</td></tr>' +
-          '<tr><td colspan="2" style="text-align:right;font-weight:bold">④合計（①＋②＋③）※税込・小数点以下切り捨て</td><td style="text-align:left;font-weight:bold">¥</td></tr>'
-        : '<tr><td colspan="2" style="text-align:right">②消費税（①×0.1）</td><td style="text-align:left">¥</td></tr>' +
-          '<tr><td colspan="2" style="text-align:right;font-weight:bold">③合計（①＋②）※税込・小数点以下切り捨て</td><td style="text-align:left;font-weight:bold">¥</td></tr>') +
+        ? '<tr><td colspan="3" style="text-align:right">②維持管理費（①×0.05）</td><td style="text-align:left">¥</td></tr>' +
+          '<tr><td colspan="3" style="text-align:right">③消費税（(①＋②)×0.1）</td><td style="text-align:left">¥</td></tr>' +
+          '<tr><td colspan="3" style="text-align:right;font-weight:bold">④合計（①＋②＋③）※税込・小数点以下切り捨て</td><td style="text-align:left;font-weight:bold">¥</td></tr>'
+        : '<tr><td colspan="3" style="text-align:right">②消費税（①×0.1）</td><td style="text-align:left">¥</td></tr>' +
+          '<tr><td colspan="3" style="text-align:right;font-weight:bold">③合計（①＋②）※税込・小数点以下切り捨て</td><td style="text-align:left;font-weight:bold">¥</td></tr>') +
       '</tfoot></table>' +
     '<div class="pay-group">' +
     '<div class="sec">◆お支払い状況</div><table>' +
