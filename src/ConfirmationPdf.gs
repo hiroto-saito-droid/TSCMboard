@@ -303,7 +303,7 @@ function renderConfirmationHtml_(variant, d, venue) {
       '<tr><th class="k">事前確定金額</th><td>' + money_(d.preConfirmed) + '</td><th class="k">事前支払額</th><td>' + money_(d.prePaid) + '</td></tr>' +
       '<tr><th class="k">(A)未精算額</th><td>' + money_(balanceVal) + '</td><th class="k">支払期限</th><td>' + ce_(d.payDue || '') + '</td></tr>' +
       '<tr><th class="k">事前確定分 支払方法</th><td>' + ce_(d.prePayMethod || '') + '</td><th class="k">追加分 支払方法</th><td>' + ce_(d.addPayMethod || '') + '</td></tr>' +
-      '<tr class="pay-total"><th class="k">合計お支払い金額</th><td colspan="3">追加料金合計金額 ¥＿＿＿＿＿＿＿＿　＋　<span style="color:#c0392b">(A)事前確定分未精算額 ¥' + balanceVal.toLocaleString() + '</span>　＝　¥＿＿＿＿＿＿＿＿</td></tr></table>' +
+      '<tr class="pay-total"><th class="k">合計お支払い金額</th><td colspan="3">追加料金合計金額 ¥＿＿＿＿＿＿＿＿　＋　<span style="color:#c0392b">(A)事前確定分未精算額 ¥' + balanceVal.toLocaleString() + '</span><br>＝　¥＿＿＿＿＿＿＿＿</td></tr></table>' +
     (payNote ? '<div class="paynote">■ お支払いに関するご案内\n' + ce_(payNote) + '</div>' : '') +
     receiptBlock +
     signBlock +
