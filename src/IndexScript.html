@@ -365,6 +365,8 @@ function addBlockCopy(){
 }
 function removeBlock(id){if(state.blocks.length<=1)return;state.blocks=state.blocks.filter(b=>b.id!==id);if(state.active===id)state.active=state.blocks[0].id;renderAll();}
 const RAKU_NOTE={'フル':'現場復帰・ゴミ回収あり','ライト':'現場復帰(15分程度)・ゴミ回収(1袋目安)','なし':''};
+// ①ヒアリングシートで「会場固有オプション」の下(一番下)にまとめて表示する区分。
+const BOTTOM_CATS_=['ケータリング','持込'];
 function renderHearing(){
   const host=document.getElementById('hearing');
   const b=activeBlock();
@@ -381,6 +383,8 @@ function renderHearing(){
   if(!HEARING.length){
     html+='<div class="banner">ヒアリング項目マスタが未取得、または項目が0件です。「ヒアリング項目マスタ」スプレッドシートを確認してください。</div>';
   }
+  // ケータリング・持込の区分は、マスタの並びに関係なく「会場固有オプション」の下(一番下)に表示する。
+  const tailByCat={};
   HEARING.forEach((sec,secIdx)=>{
     const rows=sec.items.map(it=>{
       const rowcls='row'+(it.catering?' catering-detail':'');
@@ -396,10 +400,11 @@ function renderHearing(){
     // どの案件の顧客情報かを一目で分かるようにする(vbarのinputと連動、syncMetaVenueLine_参照)。
     const metaVenueRow=(sec.cat==='META')?`<div class="row" style="border-bottom:1.5px solid #e2e8f0"><div class="lbl">会場（①上部の会場バーから入力）</div>
       <div class="field"><div class="ctl" style="font-weight:800;color:#1e293b" id="metaVenueLine">${esc(b.venueName||'(会場未入力)')}</div></div></div>`:'';
-    html+=`<div class="cat"><div class="head" style="background:${catColor(secIdx)}" data-toggle>
+    const secHtml=`<div class="cat" data-cat="${esc(sec.cat)}"><div class="head" style="background:${catColor(secIdx)}" data-toggle>
       <span>${esc(sec.cat)}</span><span class="count">（${sec.items.length}項目）</span><span class="chev">▾</span></div>
       <div class="body">${metaVenueRow}${rows}
       <div class="row" style="border:none"><div class="lbl">セクションメモ</div><div class="field"><textarea class="memo" data-sectionmemo="${esc(sec.cat)}" placeholder="このセクション共通の補足メモ…"></textarea></div></div></div></div>`;
+    if(BOTTOM_CATS_.indexOf(sec.cat)>-1)tailByCat[sec.cat]=(tailByCat[sec.cat]||'')+secHtml;else html+=secHtml;
   });
   html+=`<div class="cat"><div class="head" style="background:${catColor(HEARING.length)}" data-toggle>
     <span>会場固有オプション</span><span class="count" id="hearingFreeCount">（0件）</span><span class="chev">▾</span></div>
@@ -407,7 +412,7 @@ function renderHearing(){
       <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">この会場特有のオプション(設備・サービス等)を品目名で登録し、今回の案件で提供する場合は「あり」にしてください。「あり」の項目だけ③利用確認書に追加され、単価・数量を入力できます。</div>
       <table class="fee"><thead><tr><th>品目名</th><th style="width:110px">今回</th><th style="width:26px"></th></tr></thead><tbody id="hearingFreeTbody"></tbody></table>
       <button type="button" class="toolbtn sec" onclick="addFreeFeeRowFromHearing()" style="margin-top:8px">＋ 品目を追加</button>
-    </div></div>`;
+    </div></div>`+BOTTOM_CATS_.map(c=>tailByCat[c]||'').join('');
   host.innerHTML=html;
   host.querySelectorAll('[data-toggle]').forEach(h=>h.onclick=()=>h.closest('.cat').classList.toggle('collapsed'));
   host.querySelectorAll('select[data-item]').forEach(sel=>{
@@ -442,6 +447,9 @@ function applyCatering(){
   const c=getEl('ケータリング区分');
   const v=c?readCtl(c):'';
   host.querySelectorAll('.catering-detail').forEach(r=>r.classList.toggle('hidden', !!c && v==='なし'));
+  // 「持込」区分(持込業者名・持込内容)は、GPCMボードの飲食有無と同じく、ケータリング区分が
+  // 「持込」「併用」のときだけ表示する(区分の項目自体が無い場合は常に表示=フェイルセーフ)。
+  host.querySelectorAll('.cat[data-cat="持込"]').forEach(el=>el.classList.toggle('hidden', !!c && v!=='持込' && v!=='併用'));
   const banner=document.getElementById('cateringBanner');
   if(!banner)return;
   if(c){banner.innerHTML='ケータリング区分：<b>'+esc(v||'未選択')+'</b> → '+(v&&v!=='なし'?'ケータリング関連の項目を表示':v==='なし'?'ケータリング関連の項目は非表示':'区分を選択してください');}
