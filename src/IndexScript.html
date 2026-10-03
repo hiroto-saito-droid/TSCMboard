@@ -241,6 +241,8 @@ function writeCtl(el,v){
   if(el.classList&&el.classList.contains('timerange')){const t=el.querySelectorAll('input[type=time]');if(v&&v.indexOf('～')>-1){const p=v.split('～');t[0].value=p[0];t[1].value=p[1];}else{t[0].value='';t[1].value='';}return;}
   if(el.classList&&el.classList.contains('urllist')){const btn=el.querySelector('.ul-add');el.innerHTML=urlListRowsHtml_(v,el.getAttribute('data-item'))+(btn?btn.outerHTML:'<button type="button" class="toolbtn sec ul-add" onclick="urlListAddRow_(this)">＋ URLを追加</button>');return;}
   if(el.tagName==='SELECT'){
+    const legacy=LEGACY_SELECT_VALUES_[el.getAttribute('data-item')];
+    if(legacy&&legacy[v]&&![...el.options].some(o=>o.value===v))v=legacy[v];
     const m=/^その他（(.*)）$/.exec(String(v));
     const fl=el.closest('.field');const ot=fl?fl.querySelector('.other-input'):null;
     if(m){el.value='その他';if(ot){ot.value=m[1];ot.style.display='inline-block';}}
@@ -446,13 +448,28 @@ function applyCatering(){
   else{banner.innerHTML='';}
 }
 // 見積送付が「作成済」の場合のみ、見積書URL欄(複数可)を表示する(GPCMボードから移植)。
+// 旧選択肢「送付済」も同じ扱いにする(マスタの選択肢を作成済へ切り替える前後どちらでも動くように)。
 // 見積送付の項目自体がマスタに無い場合は常に表示する(フェイルセーフ)。
+const MITSUMORI_DONE_VALUES_=['作成済','送付済'];
 function applyMitsumoriUrlVisibility_(){
   const urlEl=getEl('見積書URL'); if(!urlEl)return;
   const row=urlEl.closest('.row'); if(!row)return;
   const ms=getEl('見積送付');
-  row.classList.toggle('hidden', !!ms && readCtl(ms)!=='作成済');
+  row.classList.toggle('hidden', !!ms && MITSUMORI_DONE_VALUES_.indexOf(readCtl(ms))<0);
 }
+// 「見積書URL」欄はurllist型の専用UI(連動用の選択・見積書の読み取り連携)と一体のため、
+// ヒアリング項目マスタではなくコード側で「見積送付」の直後に差し込む。マスタに行を
+// 追加すると、旧コードの本番環境ではMETA区分の必須項目になって保存できなくなるため。
+// マスタ側に同名の行がある場合はそちらを優先する。
+function ensureMitsumoriUrlItem_(){
+  if(HEARING.some(s=>s.items.some(i=>i.item==='見積書URL')))return;
+  const sec=HEARING.find(s=>s.items.some(i=>i.item==='見積送付'));
+  if(!sec)return;
+  const idx=sec.items.findIndex(i=>i.item==='見積送付');
+  sec.items.splice(idx+1,0,{item:'見積書URL',type:'urllist',options:null,value:'',memo:''});
+}
+// マスタの選択肢名を変えた項目について、保存済み案件の旧値を新しい選択肢へ読み替える。
+const LEGACY_SELECT_VALUES_={'見積送付':{'送付済':'作成済'}};
 // 見積書URL(urllist)の各行は「URL」または「URL<TAB>L」(L=連動用)の形で改行区切り
 // 保存されている。パースして{u,f}の配列にする(URLが空の行は除外)。見積書URL欄が
 // 無かった頃の案件(見積送付のメモ欄にURLを書いていた)は、そのメモ欄の値を使う。
@@ -1422,7 +1439,7 @@ function loadAllMasters_(cb){
     .withFailureHandler(function(err){console.warn('共通オプション取得失敗',err);STANDARD_OPTIONS=[];done();}).apiGetStandardOptions();
   google.script.run.withSuccessHandler(function(j){try{FAVORITE_VENUES=JSON.parse(j)||[];}catch(e){FAVORITE_VENUES=[];}done();})
     .withFailureHandler(function(err){console.warn('よく使う会場取得失敗',err);FAVORITE_VENUES=[];done();}).apiGetFavoriteVenues();
-  google.script.run.withSuccessHandler(function(j){try{HEARING=JSON.parse(j)||[];}catch(e){HEARING=[];}done();})
+  google.script.run.withSuccessHandler(function(j){try{HEARING=JSON.parse(j)||[];}catch(e){HEARING=[];}ensureMitsumoriUrlItem_();done();})
     .withFailureHandler(function(err){console.warn('ヒアリング項目マスタ取得失敗',err);HEARING=[];done();}).apiGetFormSchema();
   google.script.run.withSuccessHandler(function(j){try{STAFF_TEMPLATE=(JSON.parse(j)||{}).body||'';}catch(e){STAFF_TEMPLATE='';}done();})
     .withFailureHandler(function(err){console.warn('共有事項テンプレ取得失敗',err);STAFF_TEMPLATE='';done();}).apiGetStaffTemplate();
