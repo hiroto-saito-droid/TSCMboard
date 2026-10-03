@@ -133,7 +133,7 @@ function addFavoriteVenue(name, address) {
 
 /************************************************************
  * ヒアリング項目マスタ
- *   列: カテゴリ / 項目名 / 種別(select/text/date/datetime/timerange/textarea) /
+ *   列: カテゴリ / 項目名 / 種別(select/text/date/datetime/timerange/textarea/urllist) /
  *       選択肢(｜または|区切り) / 初期値 / 補足メモ / 会場依存フラグ(常時FALSE運用) /
  *       新規項目フラグ / ラクラクパック関連フラグ / ケータリング関連フラグ / お食事関連フラグ
  * GPCMの vm_buildFormSchema_() のロジックを、venueId引数なし・単一マスタ版に移植。
