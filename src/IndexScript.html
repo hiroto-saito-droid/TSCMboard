@@ -667,10 +667,15 @@ function layoutText_(){
 }
 // 前日共有。GPCMボードの「前日共有(テキスト)」と同じ文面・並びにそろえている
 // (TSCMには共有リンクの仕組みが無いため、テキスト版のみ)。GPCMにあって
-// TSCMのヒアリング項目に無いもの(クローク・受付・事前レイアウト・ラクラクパック・
-// スペース安心補償・持込詳細)は出さない。【利用オプション】には設備と、①で
-// 「あり」にした会場固有オプションを載せる。
+// TSCMのヒアリング項目に無いもの(クローク・受付・バーカウンター等)は出さない。
+// 【利用オプション】には設備と、①で「あり」にした会場固有オプションを載せる。
 function tmplZenjitsu_(){
+  const rk=q('ラクラクパック'),rkm=qmemo('ラクラクパック');
+  let rakuLines;
+  if(rk==='フル')rakuLines='ラクラクパック：あり'+(rkm?'（'+rkm+'）':'')+'\n【片付込】ラクラクパック：なし';
+  else if(rk==='ライト')rakuLines='ラクラクパック：なし\n【片付込】ラクラクパック：あり'+(rkm?'（'+rkm+'）':'');
+  else rakuLines='ラクラクパック：なし\n【片付込】ラクラクパック：なし';
+  const anshin=q('スペース安心補償');
   const b=activeBlock();
   const dateTime=formatDateJp_(q('利用日'))+(q('利用時間')||'〇〇：〇〇～〇〇：〇〇');
   const optLines=[];
@@ -686,6 +691,11 @@ function tmplZenjitsu_(){
       +'ケータリング時間：'+q('食事プラン（提供時間帯）')+'\n'
       +'飲み放題時間：'+q('ドリンクタイプ（提供時間帯）')+'\n';
   }
+  if(kbn==='持込'||kbn==='併用'){
+    cateringBlock+='\n【持込詳細】\n'
+      +'業者：'+q('持込業者名')+'\n'
+      +'持込内容：'+q('持込内容')+'\n';
+  }
   return 'お疲れ様です。\nご対応いただく案件の事前共有です。\n\n'
     +'会場：'+(b.venueName||'')+'\n'
     +(b.venueAddress?('会場住所：'+b.venueAddress+'\n'):'')
@@ -695,7 +705,10 @@ function tmplZenjitsu_(){
     +'人数：'+withN(q('来場人数')||'')+'\n'
     +'ケータリング区分：'+kbn+'\n'
     +'レイアウト：'+layoutText_()+'\n'
-    +'翌日レイアウト変更：'+(b.layoutNextEnabled?'あり':'なし')+'\n\n'
+    +'翌日レイアウト変更：'+(b.layoutNextEnabled?'あり':'なし')+'\n'
+    +'事前レイアウト：'+(q('事前レイアウト')||'なし')+'\n'
+    +rakuLines+'\n'
+    +((anshin&&anshin!=='なし')?('スペース安心補償：'+anshin+'\n'):'')+'\n'
     +'【利用オプション】\n'+(optLines.length?optLines.join('\n'):'・なし')+'\n'
     +cateringBlock
     +'\n'
