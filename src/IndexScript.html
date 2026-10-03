@@ -480,13 +480,15 @@ function ensureMitsumoriUrlItem_(){
   sec.items.splice(idx+1,0,{item:'見積書URL',type:'urllist',options:null,value:'',memo:''});
 }
 // 「飲食有無」(自社｜持込｜併用)。GPCMボードと同じく、持込区分の表示切替と前日共有・
-// テキスト出力に使う。マスタに行が無い場合はコード側で「ケータリング区分」の直前に
-// 差し込む(マスタ側に同名の行がある場合はそちらを優先する)。
+// テキスト出力に使う。マスタに行が無い場合はコード側で「基本情報」区分の「来場人数」の
+// 直後に差し込む(来場人数が無ければ基本情報の末尾。マスタ側に同名の行がある場合は
+// そちらを優先する)。
 function ensureFoodItem_(){
   if(HEARING.some(s=>s.items.some(i=>i.item==='飲食有無')))return;
-  const sec=HEARING.find(s=>s.items.some(i=>i.item==='ケータリング区分'));
+  const sec=HEARING.find(s=>s.cat==='基本情報')||HEARING.find(s=>s.items.some(i=>i.item==='ケータリング区分'));
   if(!sec)return;
-  const idx=sec.items.findIndex(i=>i.item==='ケータリング区分');
+  const after=sec.items.findIndex(i=>i.item==='来場人数');
+  const idx=after>-1?after+1:sec.items.length;
   sec.items.splice(idx,0,{item:'飲食有無',type:'select',options:['自社','持込','併用'],value:'',memo:''});
 }
 // 飲食有無の出力表記(GPCMボードと同じく「併用」は「自:未定・持込」と書く)。
