@@ -81,6 +81,125 @@ function apiExtractMitsumoriAmount(base64Data, fileName) {
 }
 
 /**
+ * ジョブカンの「見積書を共有」で発行される閲覧用URL(share_id付き)から、OCRを
+ * 介さずプレビューページのHTMLを直接取得・解析して、御見積金額と品目・備考を
+ * 取り出す(PDFの写真が不鮮明な場合の代替経路。GPCMボードから移植)。
+ *   1. 共有URLにアクセスするとセッションCookieが発行され、閲覧用プレビューへ
+ *      302リダイレクトされる(UrlFetchAppが自動追従)
+ *   2. 取得したCookieを付けてプレビューページを取得すると、内容詳細テーブルが
+ *      HTMLとして返る(共有URL自体が認可トークンで、パスワード等は不要)
+ *   3. cs_parseMitsumoriHtml_でテーブル行と備考行を抽出する
+ * 取得先はジョブカン(in.jobcan.jp)に限定する(任意URLへのサーバー側リクエストを
+ * 防ぐため。TSCMで追加した制限)。
+ */
+function apiExtractMitsumoriFromUrl(shareUrl) {
+  try {
+    shareUrl = String(shareUrl || '').trim();
+    var idMatch = /share_id=(\d+)/.exec(shareUrl);
+    if (!shareUrl || !idMatch || !/^https:\/\/in\.jobcan\.jp\//.test(shareUrl)) {
+      return { ok: false, error: 'ジョブカンの共有リンクの形式が正しくありません(in.jobcan.jp の share_id 付きURLを貼り付けてください)。' };
+    }
+    var shareId = idMatch[1];
+    var resp1 = UrlFetchApp.fetch(shareUrl, { followRedirects: true, muteHttpExceptions: true });
+    if (resp1.getResponseCode() !== 200) {
+      return { ok: false, error: '共有リンクへのアクセスに失敗しました(HTTP ' + resp1.getResponseCode() + ')。リンクの有効期限が切れていないかご確認ください。' };
+    }
+    var cookieHeader = resp1.getAllHeaders()['Set-Cookie'];
+    if (!cookieHeader) {
+      return { ok: false, error: 'セッションCookieの取得に失敗しました。リンクが正しいかご確認ください。' };
+    }
+    var cookieArr = Array.isArray(cookieHeader) ? cookieHeader : [cookieHeader];
+    var cookieStr = cookieArr.map(function (c) { return c.split(';')[0]; }).join('; ');
+    var previewUrl = 'https://in.jobcan.jp/es01/TransShareReader/preview?share_id=' + encodeURIComponent(shareId);
+    var resp2 = UrlFetchApp.fetch(previewUrl, { headers: { Cookie: cookieStr }, muteHttpExceptions: true });
+    if (resp2.getResponseCode() !== 200) {
+      return { ok: false, error: '見積書内容の取得に失敗しました(HTTP ' + resp2.getResponseCode() + ')。' };
+    }
+    var html = resp2.getContentText('UTF-8');
+    var totalM = /class="totalamount">([\d,]+)</.exec(html);
+    var items = cs_parseMitsumoriHtml_(html);
+    if (!totalM && !items.length) {
+      return { ok: false, error: '見積書の内容を読み取れませんでした。リンクの有効期限、または手入力・PDFアップロードをお試しください。' };
+    }
+    return { ok: true, amount: totalM ? totalM[1].replace(/,/g, '') : '', items: items };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+/** HTMLタグを除去し、代表的なエンティティ(&amp;等)をデコードする。 */
+function cs_stripTagsDecode_(s) {
+  return String(s || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
+}
+
+/**
+ * ジョブカン見積書プレビューHTMLから品目・備考を抽出する。
+ * 通常品目行(<tr class="normal">)：内容詳細セルの1つ目のdiv＝品目名
+ * (2つ目のdivは日付のため使わない)、数量・単位・単価・金額をそのまま取得し、
+ * 備考セルの空でない方のdivがあれば、品目とは別のnote:true項目として追加する。
+ * 表内の注記行(<tr><td class="tdmemo">…)は丸ごと1件のnote:true項目にする。
+ */
+function cs_parseMitsumoriHtml_(html) {
+  var items = [];
+  var blocks = [];
+  var rowRe = /<tr class="normal">([\s\S]*?)<\/tr>/g;
+  var m;
+  while ((m = rowRe.exec(html))) {
+    blocks.push({ idx: m.index, type: 'item', body: m[1] });
+  }
+  var memoRe = /<tr><td class="tdmemo"[^>]*><div class="memo_value">([\s\S]*?)<\/div><\/td><\/tr>/g;
+  while ((m = memoRe.exec(html))) {
+    blocks.push({ idx: m.index, type: 'memo', body: m[1] });
+  }
+  blocks.sort(function (a, b) { return a.idx - b.idx; });
+
+  blocks.forEach(function (b) {
+    if (b.type === 'memo') {
+      var text = cs_stripTagsDecode_(b.body);
+      if (text) items.push({ name: text, qty: '', unit: '', unitPrice: '', amount: '', note: true });
+      return;
+    }
+    var body = b.body;
+    var nameM = /<td class="product_name"[^>]*>([\s\S]*?)<\/td>/.exec(body);
+    var name = '';
+    if (nameM) {
+      var divs = nameM[1].match(/<div[^>]*>([\s\S]*?)<\/div>/g) || [];
+      if (divs.length) name = cs_stripTagsDecode_(divs[0]);
+    }
+    var qtyM = /<td class="quantity">([\s\S]*?)<\/td>/.exec(body);
+    var unitM = /<td class="unit">([\s\S]*?)<\/td>/.exec(body);
+    var priceM = /<td class="price">([\s\S]*?)<\/td>/.exec(body);
+    var amountM = /<td class="amount">([\s\S]*?)<\/td>/.exec(body);
+    var remarksM = /<td class="remarks"[^>]*>([\s\S]*?)<\/td>/.exec(body);
+    items.push({
+      name: name,
+      qty: qtyM ? cs_stripTagsDecode_(qtyM[1]) : '',
+      unit: unitM ? cs_stripTagsDecode_(unitM[1]) : '',
+      unitPrice: priceM ? cs_stripTagsDecode_(priceM[1]).replace(/,/g, '') : '',
+      amount: amountM ? cs_stripTagsDecode_(amountM[1]).replace(/,/g, '') : ''
+    });
+    if (remarksM) {
+      var rdivs = remarksM[1].match(/<div[^>]*>([\s\S]*?)<\/div>/g) || [];
+      var remarkText = '';
+      for (var i = 0; i < rdivs.length; i++) {
+        var t = cs_stripTagsDecode_(rdivs[i]);
+        if (t) { remarkText = t; break; }
+      }
+      if (remarkText) items.push({ name: remarkText, qty: '', unit: '', unitPrice: '', amount: '', note: true });
+    }
+  });
+  return items;
+}
+
+/**
  * デプロイ担当者が一度だけApps Scriptエディタで手動実行するための関数。
  * これを実行して権限確認ダイアログを承認して初めて、Webアプリとしてデプロイした際に
  * Drive Advanced Service・UrlFetchAppが使えるようになる(承認前にデプロイすると、
@@ -124,9 +243,11 @@ function cs_parseMitsumoriItems_(text) {
   var lines = text.split('\n').map(function (l) { return l.replace(/^\t+/, '').trim(); }).filter(function (l) { return l; });
   var qtyRe = /^-?\d+(\.\d+)?$/;
   var moneyRe = /^-?[\d,]+$/;
-  var dateRe = /^\d{4}\/\d{1,2}\/\d{1,2}/;
+  // 「2026/10/1」形式に加え「2026年10月1日」形式の日付も同様に読み飛ばし対象とする
+  // (日付行を品目名や備考として誤って拾わないように。GPCMボードから移植)。
+  var dateRe = /^\d{4}(\/\d{1,2}\/\d{1,2}|年\d{1,2}月\d{1,2}日)/;
   var taxRe = /^\d{1,2}%$/;
-  var headerLabels = { '内容詳細': 1, '数量': 1, '単位': 1, '単価': 1, '金額': 1, '備考': 1, '税': 1 };
+  var headerLabels = { '内容詳細': 1, '数量': 1, '単位': 1, '単価': 1, '金額': 1, '備考': 1, '税': 1, '税率': 1 };
   var consumed = {};
   var found = [];
 
@@ -159,11 +280,21 @@ function cs_parseMitsumoriItems_(text) {
   var scanStart = headerIdx >= 0 ? headerIdx + 1 : 0;
   var summaryIdx = lines.indexOf('小計', scanStart);
   var scanEnd = summaryIdx >= 0 ? summaryIdx : lines.length;
+  // 備考欄の記載(例:「※繁忙期価格」)や、表の下に続く注記(例:「※【飲食費】の内訳:…」)は
+  // 品目(数量・単価を持つ行)とは別の「備考」(note:true)として拾う。長い注記はOCRの
+  // テキスト化時に複数行へ折り返されることがあるため、間に品目行を挟まず連続している
+  // 行は1件の備考としてまとめる(GPCMボードから移植)。
+  var noteGroup = null;
   for (var m2 = scanStart; m2 < scanEnd; m2++) {
-    if (consumed[m2]) continue;
+    if (consumed[m2]) { noteGroup = null; continue; }
     var l = lines[m2];
-    if (headerLabels[l] || taxRe.test(l) || qtyRe.test(l) || moneyRe.test(l) || dateRe.test(l)) continue;
-    found.push({ pos: m2, item: { name: l, qty: '', unit: '', unitPrice: '', amount: '' } });
+    if (headerLabels[l] || taxRe.test(l) || qtyRe.test(l) || moneyRe.test(l) || dateRe.test(l)) { noteGroup = null; continue; }
+    if (noteGroup) {
+      noteGroup.item.name += ' ' + l;
+    } else {
+      noteGroup = { pos: m2, item: { name: l, qty: '', unit: '', unitPrice: '', amount: '', note: true } };
+      found.push(noteGroup);
+    }
   }
 
   found.sort(function (a, b) { return a.pos - b.pos; });

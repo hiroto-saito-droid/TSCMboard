@@ -251,6 +251,10 @@ function renderConfirmationHtml_(variant, d, venue) {
     ? '<div class="sec">◆見積書内訳（スタッフ用参考・見積書PDFより自動取得）</div>' +
       '<table class="fee"><thead><tr><th>品目</th><th style="width:50px">数量</th><th style="width:45px">単位</th><th style="width:90px">単価(一人あたり等)</th><th style="width:90px">金額</th></tr></thead><tbody>' +
       mitsumoriItems.map(function (it) {
+        // 見積書の「備考」欄や表下の「※～」注記(note:true)は、品目行とは別の1行の注記として表示する。
+        if (it.note) {
+          return '<tr><td colspan="5" style="color:#64748b;font-size:11px">備考：' + ce_(it.name || '') + '</td></tr>';
+        }
         return '<tr><td>' + ce_(it.name || '') + '</td><td style="text-align:right">' + ce_(it.qty || '') +
           '</td><td>' + ce_(it.unit || '') + '</td><td style="text-align:right">' + money_(it.unitPrice) +
           '</td><td style="text-align:right">' + money_(it.amount) + '</td></tr>';

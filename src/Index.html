@@ -59,7 +59,10 @@ textarea{width:100%;min-height:54px;resize:vertical}
 .sign-line{border-bottom:1.5px solid #94a3b8;height:40px;margin-top:20px}
 .layoutbox{border:1px dashed #cbd5e1;background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px}
 .imgslot{border:1px dashed #cbd5e1;border-radius:8px;min-height:150px;display:flex;align-items:center;justify-content:center;color:#94a3b8;overflow:hidden;background:#f8fafc}
-.imgslot img{max-width:100%;max-height:340px}
+.imgslot img{max-width:100%;max-height:340px;cursor:zoom-in}
+#imgFullOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:100000;align-items:center;justify-content:center;cursor:zoom-out}
+#imgFullOverlay.show{display:flex}
+#imgFullOverlay img{max-width:95vw;max-height:95vh;object-fit:contain}
 .uploadbar{display:flex;gap:10px;align-items:center;margin:8px 0;flex-wrap:wrap}
 .filebtn{display:inline-flex;align-items:center;gap:6px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
 .filebtn input{display:none}
@@ -129,6 +132,7 @@ label.inl{display:flex;gap:6px;align-items:center;font-size:12px;color:#334155}
 <div id="confirmation" class="pane"></div>
 <div class="footer">会場自由入力・標準オプション共通マスタ駆動（ヒアリング項目・標準オプション・共有事項テンプレはスプレッドシートから読込）。データは案件履歴に保存。</div>
 </div>
+<div id="imgFullOverlay" onclick="hideImgFull_()"><img src="" alt="レイアウト図の全画面表示"></div>
 <script>
 // window.INITIAL_CASE_ID はIndex.html自体がテンプレート評価(createTemplateFromFile
 // 経由)されるためスクリプトレットで埋め込める。本体スクリプト(IndexScript.html)は
