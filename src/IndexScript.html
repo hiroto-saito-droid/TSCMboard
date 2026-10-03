@@ -800,8 +800,8 @@ function makeLayoutPdf(){
     .withFailureHandler(function(e){ if(box)box.textContent='PDF作成エラー: '+e; })
     .generateLayoutPdf(JSON.stringify(d));
 }
-const PAY_PRE=['【事前】GMO銀行振込','【事前】GMOカード決済','【事前】みずほ銀行振込','【当日】現金','【当日】カード決済','【後払い】請求書払い（ビジネスアカウント）','【予約サイト】予約サイト指定方法'];
-const PAY_ADD=['【当日】現金','【当日】カード決済','【後払い】請求書払い（ビジネスアカウント）'];
+const PAY_PRE=['【事前】GMO銀行振込','【事前】GMOカード決済','【事前】みずほ銀行振込','【当日】現金','【当日】カード決済','【当日】QRカード決済','【後払い】請求書払い（ビジネスアカウント）','【予約サイト】予約サイト指定方法'];
+const PAY_ADD=['【当日】現金','【当日】カード決済','【当日】QRカード決済','【後払い】請求書払い（ビジネスアカウント）'];
 const PAY_NOTE_GMO='GMO銀行振込・カード決済の場合：領収書を希望される際は、マイページからダウンロードするようご案内をお願いします。';
 const PAY_NOTE_MIZUHO='みずほ銀行振込の場合：領収書を希望される際は、後日PDFにて発行する旨をお伝えください。';
 const PAY_NOTE_ATO='ご利用月締めの翌月末払いにて請求書を発行いたします。請求書は翌月３営業日以内にビジネスアカウントのマイページよりダウンロード可能となります。';
@@ -815,10 +815,21 @@ const payOptHtml=(a,sel)=>a.map(o=>`<option ${o===sel?'selected':''}>${o}</optio
 // のあり/なし切替等)にvalue=""へ戻ってしまい入力内容がPDFへ反映されないバグがあったため、
 // ブロックごとの状態(b.conf)に保持し、再描画のたびに復元する方式に変更した。
 function ensureConf_(b){
-  if(!b.conf)b.conf={attendant:'',preConfirmed:'',prePaid:'',balance:'',payDue:'',prePayMethod:'',addPayMethod:'',receiptName:'',receiptAddress:'',summaryHtml:null,staffHtml:null,mgmtFee:'あり',mitsumoriItems:[]};
+  if(!b.conf)b.conf={attendant:'',preConfirmed:'',prePaid:'',balance:'',payDue:'',prePayMethod:'',addPayMethod:'',preCardOrderId:'',preCardName:'',addCardOrderId:'',addCardName:'',receiptName:'',receiptAddress:'',summaryHtml:null,staffHtml:null,mgmtFee:'あり',mitsumoriItems:[]};
+  if(b.conf.preCardOrderId==null)b.conf.preCardOrderId='';
+  if(b.conf.preCardName==null)b.conf.preCardName='';
+  if(b.conf.addCardOrderId==null)b.conf.addCardOrderId='';
+  if(b.conf.addCardName==null)b.conf.addCardName='';
   if(!b.conf.mgmtFee)b.conf.mgmtFee='あり';
   if(!b.conf.mitsumoriItems)b.conf.mitsumoriItems=[];
   return b.conf;
+}
+// 事前確定分・追加分の支払方法がどちらも「【当日】QRカード決済」の場合、
+// 同じ1回の決済のため、オーダーID・決済名義の入力欄は事前確定分側の1組だけを
+// 出す(追加分側は表示しない、値もcollectConfPayload_で事前確定分側と同じ値を使う)。
+// (GPCMボードから移植)
+function confBothQrCard_(cf){
+  return cf.prePayMethod==='【当日】QRカード決済'&&cf.addPayMethod==='【当日】QRカード決済';
 }
 // 見積書PDFから自動抽出した品目内訳を編集可能な一覧として表示する(GPCMボードから
 // 移植)。OCRの誤読等で金額が違う場合はその場で直接書き換えられ、✕で行削除、
@@ -1038,7 +1049,10 @@ function renderConfirmation(){
     <label class="inl">事前確定金額 <input id="confPreConfirmed" type="text" value="${cf.preConfirmed?'￥'+Number(String(cf.preConfirmed).replace(/[,¥\s]/g,'')||0).toLocaleString():''}" placeholder="数字のみ入力"></label><label class="inl">事前支払額 <input id="confPrePaid" type="text" value="${cf.prePaid?'￥'+Number(String(cf.prePaid).replace(/[,¥\s]/g,'')||0).toLocaleString():''}" placeholder="数字のみ入力"></label>
     <label class="inl">(A)事前確定分未精算額（自動計算） <input id="confBalance" type="text" value="￥${Number(cf.balance||0).toLocaleString()}" readonly style="background:#f1f5f9;color:#64748b;cursor:not-allowed"></label><label class="inl">支払期限 <input id="confPayDue" type="date" value="${esc(cf.payDue)}"></label>
     <label class="inl">事前確定分の支払方法 <select id="prePay" onchange="updatePayNote()">${payOptHtml(PAY_PRE,cf.prePayMethod)}</select></label>
+    ${(cf.prePayMethod==='【当日】QRカード決済'&&!confBothQrCard_(cf))?`<label class="inl">オーダーID（QR-から始まる英数字） <input id="confPreCardOrderId" type="text" value="${esc(cf.preCardOrderId)}" placeholder="例：QR-AB12CD34"></label><label class="inl">決済名義 <input id="confPreCardName" type="text" value="${esc(cf.preCardName)}" placeholder="決済時の名義"></label>`:''}
     <label class="inl">追加分の支払方法 <select id="addPay" onchange="updatePayNote()">${payOptHtml(PAY_ADD,cf.addPayMethod)}</select></label>
+    ${(cf.addPayMethod==='【当日】QRカード決済'&&!confBothQrCard_(cf))?`<label class="inl">オーダーID（QR-から始まる英数字） <input id="confAddCardOrderId" type="text" value="${esc(cf.addCardOrderId)}" placeholder="例：QR-AB12CD34"></label><label class="inl">決済名義 <input id="confAddCardName" type="text" value="${esc(cf.addCardName)}" placeholder="決済時の名義"></label>`:''}
+    ${confBothQrCard_(cf)?`<label class="inl">オーダーID（QR-から始まる英数字） <input id="confPreCardOrderId" type="text" value="${esc(cf.preCardOrderId)}" placeholder="例：QR-AB12CD34"></label><label class="inl">決済名義 <input id="confPreCardName" type="text" value="${esc(cf.preCardName)}" placeholder="決済時の名義"></label>`:''}
     <div class="inl" style="margin-top:6px;font-size:14px;flex-wrap:wrap;gap:6px"><b>合計お支払い金額</b>：追加料金合計金額<span style="font-weight:700">￥＿＿＿＿＿＿＿＿</span>＋<span style="color:#dc2626;font-weight:700">(A)事前確定分未精算額 ￥${Number(cf.balance||0).toLocaleString()}</span>＝<span style="font-weight:700;font-size:16px;color:#1d4ed8">￥＿＿＿＿＿＿＿＿</span></div></div>
     <div style="margin-top:10px"><div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:4px">お支払いに関するご案内（支払方法により自動切替）</div>
     <div id="payNote" style="white-space:pre-wrap;background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:12px;color:#334155"></div></div></div>
@@ -1108,8 +1122,12 @@ function renderConfirmation(){
   };
   renderMitsumoriItemsList_(cf);
   document.getElementById('mgmtFeeSel').addEventListener('change',e=>{cf.mgmtFee=e.target.value;renderConfirmation();});
-  document.getElementById('prePay').addEventListener('change',e=>{cf.prePayMethod=e.target.value;});
-  document.getElementById('addPay').addEventListener('change',e=>{cf.addPayMethod=e.target.value;});
+  document.getElementById('prePay').addEventListener('change',e=>{cf.prePayMethod=e.target.value;renderConfirmation();});
+  document.getElementById('addPay').addEventListener('change',e=>{cf.addPayMethod=e.target.value;renderConfirmation();});
+  const preCardOrderIdEl=document.getElementById('confPreCardOrderId'); if(preCardOrderIdEl)preCardOrderIdEl.oninput=e=>{cf.preCardOrderId=e.target.value;};
+  const preCardNameEl=document.getElementById('confPreCardName'); if(preCardNameEl)preCardNameEl.oninput=e=>{cf.preCardName=e.target.value;};
+  const addCardOrderIdEl=document.getElementById('confAddCardOrderId'); if(addCardOrderIdEl)addCardOrderIdEl.oninput=e=>{cf.addCardOrderId=e.target.value;};
+  const addCardNameEl=document.getElementById('confAddCardName'); if(addCardNameEl)addCardNameEl.oninput=e=>{cf.addCardName=e.target.value;};
   document.getElementById('confReceiptName').oninput=e=>{cf.receiptName=e.target.value;};
   document.getElementById('confReceiptAddress').oninput=e=>{cf.receiptAddress=e.target.value;};
   refreshPaySummary_();
@@ -1167,6 +1185,12 @@ function collectConfPayload_(variant){
     preConfirmed:cf.preConfirmed,prePaid:cf.prePaid,balance:cf.balance,payDue:cf.payDue,
     receiptName:cf.receiptName,receiptAddress:cf.receiptAddress,
     prePayMethod:cf.prePayMethod,addPayMethod:cf.addPayMethod,
+    preCardOrderId:cf.preCardOrderId,preCardName:cf.preCardName,
+    // 事前確定分・追加分がどちらも「【当日】QRカード決済」の場合は同じ1回の決済
+    // のため、追加分側も事前確定分側と同じオーダーID・決済名義を送る(入力欄が
+    // 1組しか無いため)。
+    addCardOrderId:confBothQrCard_(cf)?cf.preCardOrderId:cf.addCardOrderId,
+    addCardName:confBothQrCard_(cf)?cf.preCardName:cf.addCardName,
     mitsumoriItems:cf.mitsumoriItems||[]};
 }
 function makeConfPdf(variant){

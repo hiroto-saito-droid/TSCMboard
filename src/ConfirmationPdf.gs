@@ -111,6 +111,17 @@ function ce_(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+/** サマリー/共有事項が2ページにまたがる際、行の途中で不自然に切れないよう、
+ *  各行を独立したブロック要素にして返す(page-break-inside:avoidと組み合わせて
+ *  使う。改ページは必ず行と行の間で発生するようになり、空行はその高さを保つ)。
+ *  GPCMボードから移植。 */
+function wrapLines_(text) {
+  var lines = String(text == null ? '' : text).split('\n');
+  return lines.map(function (line) {
+    return '<div class="ln">' + (line === '' ? '&nbsp;' : ce_(line)) + '</div>';
+  }).join('');
+}
+
 /** 数字だけ入力すればPDF上で¥表記になるようにする(数値でなければそのまま表示)。 */
 function money_(v) {
   if (v === '' || v == null) return '';
@@ -195,6 +206,32 @@ function renderConfirmationHtml_(variant, d, venue) {
   // ここでもd.preConfirmed/d.prePaidから独立して再計算する(渡された値は信頼しない)。
   var balanceVal = om_num_(d.preConfirmed) - om_num_(d.prePaid);
 
+  // 支払方法が「当日QRカード決済」の場合のみ、QR決済端末の照合用にオーダーID・
+  // 決済名義を追記する。事前確定分・追加分がどちらもQRカード決済の場合は
+  // 同じ1回の決済のため、オーダーID・決済名義は1組だけ出す(重複表示を避ける)。
+  // サイン用(お客様控)のみに記載する(スタッフ用には出さない。GPCMボードから移植)。
+  var cardRowsInner = '';
+  if (!isStaff) {
+    var preQr = d.prePayMethod === '【当日】QRカード決済';
+    var addQr = d.addPayMethod === '【当日】QRカード決済';
+    if (preQr && addQr) {
+      cardRowsInner += '<tr><th class="k">オーダーID</th><td>' + ce_(d.preCardOrderId || '') + '</td></tr><tr><th class="k">決済名義</th><td>' + ce_(d.preCardName || '') + '</td></tr>';
+    } else {
+      if (preQr) {
+        cardRowsInner += '<tr><th class="k">事前確定分 オーダーID</th><td>' + ce_(d.preCardOrderId || '') + '</td></tr><tr><th class="k">事前確定分 決済名義</th><td>' + ce_(d.preCardName || '') + '</td></tr>';
+      }
+      if (addQr) {
+        cardRowsInner += '<tr><th class="k">追加分 オーダーID</th><td>' + ce_(d.addCardOrderId || '') + '</td></tr><tr><th class="k">追加分 決済名義</th><td>' + ce_(d.addCardName || '') + '</td></tr>';
+      }
+    }
+  }
+  // 領収書欄と同系統の枠囲みデザイン(見出し色違い)。オーダーID・決済名義は当日
+  // その場でスタッフが記入する短い文字列のため、領収書欄よりセルの高さを抑える。
+  var cardBlock = (cardRowsInner)
+    ? '<div class="sec card">◆QRカード決済確認</div>' +
+      '<div class="card-box"><table class="card-table">' + cardRowsInner + '</table></div>'
+    : '';
+
   var payNote = confPayNote_(d.prePayMethod);
   var addNote = confPayNote_(d.addPayMethod);
   if (addNote && addNote !== payNote) payNote = '【事前確定分】' + payNote + '\n【追加分】' + addNote;
@@ -247,14 +284,21 @@ function renderConfirmationHtml_(variant, d, venue) {
     ".doc-head{display:flex;justify-content:space-between;border-bottom:2px solid #1a2b4a;padding-bottom:4px;margin-bottom:4px;}" +
     ".doc-title{font-size:15px;font-weight:bold;}.doc-title .badge{font-size:10px;}.doc-sub{font-size:9.5px;color:#555;}" +
     ".doc-meta{font-size:9.5px;text-align:right;color:#444;}" +
-    ".sec{background:#1a2b4a;color:#fff;font-size:10px;font-weight:bold;padding:2.5px 8px;margin:5px 0 2px;page-break-after:avoid;}.sec.sign{background:#0e7a5f;}.sec.receipt{background:#9a6a1e;}" +
+    ".sec{background:#1a2b4a;color:#fff;font-size:10px;font-weight:bold;padding:2.5px 8px;margin:5px 0 2px;page-break-after:avoid;}.sec.sign{background:#0e7a5f;}.sec.receipt{background:#9a6a1e;}.sec.card{background:#1d4ed8;}" +
     ".receipt-box{border:2px solid #9a6a1e;padding:6px 9px;margin-top:2px;page-break-inside:avoid;}" +
     ".receipt-table td{height:15mm;vertical-align:top;font-size:11px;}.receipt-table td.name{height:12mm;}.receipt-table td.addr{height:8mm;}" +
+    ".card-box{border:2px solid #1d4ed8;padding:5px 8px;margin-top:2px;page-break-inside:avoid;}" +
+    ".card-table td{height:6mm;vertical-align:top;font-size:10.5px;}" +
     "table{width:100%;border-collapse:collapse;font-size:9px;margin-bottom:2px;}" +
     "tr{page-break-inside:avoid;}" +
     "th,td{border:1px solid #b0b6bf;padding:1.5px 5px;vertical-align:top;}th{background:#e8ecf2;font-weight:bold;}th.k{width:110px;}" +
-    ".summary{white-space:pre-wrap;border:1px solid #b0b6bf;background:#fbfbfd;padding:5px 8px;font-size:9.5px;}" +
-    ".share{white-space:pre-wrap;border:1px solid #b0b6bf;background:#fffdf5;padding:5px 8px;font-size:9px;}" +
+    // サマリー/共有事項は長文になると2ページにまたがることがあるが、行の途中で
+    // 不自然に切れて見えないよう、各行(.ln)単位でしか改ページしないようにする
+    // (box-decoration-break:cloneで、ページをまたいだ場合も枠線・背景を
+    // それぞれのページで完結した箱として見せる)。
+    ".summary{white-space:pre-wrap;border:1px solid #b0b6bf;background:#fbfbfd;padding:5px 8px;font-size:9.5px;box-decoration-break:clone;-webkit-box-decoration-break:clone;}" +
+    ".share{white-space:pre-wrap;border:1px solid #b0b6bf;background:#fffdf5;padding:5px 8px;font-size:9px;box-decoration-break:clone;-webkit-box-decoration-break:clone;}" +
+    ".summary .ln,.summary div,.share .ln,.share div{page-break-inside:avoid;}" +
     ".fee .r{text-align:right;}.paynote{white-space:pre-wrap;border:1px solid #b0b6bf;background:#f4f8ff;padding:4px 7px;font-size:9px;margin-top:2px;}" +
     ".maintnote{font-size:8.5px;color:#666;margin:2px 0 4px;}" +
     // お支払い状況・領収書・署名欄は、お客様が最終的に確認・署名する一連の内容のため、
@@ -282,7 +326,7 @@ function renderConfirmationHtml_(variant, d, venue) {
       '<tr><th class="k">利用日</th><td>' + ce_(d.useDate || '') + '</td><th class="k">利用時間</th><td>' + ce_(d.useTime || '') + '</td></tr>' +
       '<tr><th class="k">ご利用人数</th><td colspan="3">' + ce_(d.headcount || '') + '</td></tr></table>' +
     '<div class="sec">ご成約内容サマリー</div><div class="summary">' +
-      (d.summaryHtml != null ? sanitizeRichHtml_(d.summaryHtml) : ce_(d.summary || '')) + '</div>' +
+      (d.summaryHtml != null ? sanitizeRichHtml_(d.summaryHtml) : wrapLines_(d.summary || '')) + '</div>' +
     staffShare +
     mitsumoriBlock +
     '<div class="sec">◆追加料金</div>' +
@@ -305,6 +349,7 @@ function renderConfirmationHtml_(variant, d, venue) {
       '<tr><th class="k">事前確定分 支払方法</th><td>' + ce_(d.prePayMethod || '') + '</td><th class="k">追加分 支払方法</th><td>' + ce_(d.addPayMethod || '') + '</td></tr>' +
       '<tr class="pay-total"><th class="k">合計お支払い金額</th><td colspan="3">追加料金合計金額 ¥＿＿＿＿＿＿＿＿　＋　<span style="color:#c0392b">(A)事前確定分未精算額 ¥' + balanceVal.toLocaleString() + '</span><br>＝　¥＿＿＿＿＿＿＿＿</td></tr></table>' +
     (payNote ? '<div class="paynote">■ お支払いに関するご案内\n' + ce_(payNote) + '</div>' : '') +
+    cardBlock +
     receiptBlock +
     signBlock +
     '</div>' +
