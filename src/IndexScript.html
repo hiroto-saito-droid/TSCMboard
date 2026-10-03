@@ -654,15 +654,52 @@ function tmplIsshukan_(){
     +'〇会場貸出重要事項：'+(venueRentalNotes_()?('\n'+venueRentalNotes_()):'')
     +shimbashi;
 }
-// 以前は末尾に③利用確認書の「◆立会スタッフ共有事項」をそのまま貼り付けていたが、
-// 前日共有の用途には冗長(テンプレの定型文まで含まれる)なため、GPCMボードと同じく
-// 簡潔な締めの一文に変更した。冒頭にはご利用日(M月D日)を自動反映する。
+// レイアウト提案を「〇〇形式」の表記にする(GPCMボードのlayoutText_と同じ)。
+// 「自由記述」の場合は備考メモの内容を添える。
+function layoutText_(){
+  const v=q('レイアウト提案');
+  if(!v)return '';
+  if(v==='自由記述'||v.indexOf('その他')===0){
+    const memo=qmemo('レイアウト提案');
+    return memo?(v+'（'+memo+'）'):v;
+  }
+  return v.indexOf('形式')>-1?v:(v+'形式');
+}
+// 前日共有。GPCMボードの「前日共有(テキスト)」と同じ文面・並びにそろえている
+// (TSCMには共有リンクの仕組みが無いため、テキスト版のみ)。GPCMにあって
+// TSCMのヒアリング項目に無いもの(クローク・受付・事前レイアウト・ラクラクパック・
+// スペース安心補償・持込詳細)は出さない。【利用オプション】には設備と、①で
+// 「あり」にした会場固有オプションを載せる。
 function tmplZenjitsu_(){
-  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(q('利用日')||'');
-  const dayText=m?((+m[2])+'月'+(+m[3])+'日に'):'明日';
-  return '※前日共有\n\nお疲れ様です。\n'+dayText+'ご対応いただく案件の前日共有です。\n\n'
-    +buildOutput()
-    +'\n\nご対応お願い致します。';
+  const b=activeBlock();
+  const dateTime=formatDateJp_(q('利用日'))+(q('利用時間')||'〇〇：〇〇～〇〇：〇〇');
+  const optLines=[];
+  const proj=q('プロジェクター・スクリーン'); if(proj&&proj!=='なし'&&proj!=='無し')optLines.push('・プロジェクター・スクリーン：'+proj);
+  const mic=q('マイク'); if(mic&&mic!=='なし'&&mic!=='無し')optLines.push('・マイク：'+mic);
+  ensureFreeFees_(b).filter(freeFeeOn_).forEach(o=>optLines.push('・'+(o.name||'(品目名未入力)')+'：あり'));
+  const kbn=q('ケータリング区分');
+  let cateringBlock='';
+  if(kbn&&kbn!=='なし'&&kbn!=='持込'){
+    cateringBlock='\n【ケータリング詳細】\n'
+      +'お食事プラン：'+q('食事プラン')+'\n'
+      +'ドリンクプラン：'+q('ドリンクタイプ')+'\n'
+      +'ケータリング時間：'+q('食事プラン（提供時間帯）')+'\n'
+      +'飲み放題時間：'+q('ドリンクタイプ（提供時間帯）')+'\n';
+  }
+  return 'お疲れ様です。\nご対応いただく案件の事前共有です。\n\n'
+    +'会場：'+(b.venueName||'')+'\n'
+    +(b.venueAddress?('会場住所：'+b.venueAddress+'\n'):'')
+    +(q('会社名')?('会社名：'+q('会社名')+'\n'):'')
+    +'担当者：'+withSama(q('担当者'))+'\n'
+    +'ご予約日時：'+dateTime+'\n'
+    +'人数：'+withN(q('来場人数')||'')+'\n'
+    +'ケータリング区分：'+kbn+'\n'
+    +'レイアウト：'+layoutText_()+'\n'
+    +'翌日レイアウト変更：'+(b.layoutNextEnabled?'あり':'なし')+'\n\n'
+    +'【利用オプション】\n'+(optLines.length?optLines.join('\n'):'・なし')+'\n'
+    +cateringBlock
+    +'\n'
+    +'ご対応お願い致します。';
 }
 // ご利用日から7日前の日付を求め、土日にかかる場合は直前の平日(金曜)に繰り上げる。
 // 「ご利用日1週間前(平日)17:00までにご連絡」の締切日算出に使う。GPCMボードと共通仕様。
