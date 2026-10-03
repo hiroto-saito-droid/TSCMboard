@@ -420,6 +420,7 @@ function renderHearing(){
     if(ot)sel.addEventListener('change',()=>{ot.style.display=(sel.value==='その他')?'inline-block':'none';});
   });
   const c=getEl('ケータリング区分'); if(c)c.addEventListener('change',applyCatering);
+  const foodEl=getEl('飲食有無'); if(foodEl)foodEl.addEventListener('change',applyCatering);
   const stEl=getEl('ステータス'); if(stEl)stEl.addEventListener('change',updateStatusPill);
   const rk=getEl('ラクラクパック'); if(rk)rk.addEventListener('change',()=>{const mm=rk.closest('.field').querySelector('.memo'); if(mm&&RAKU_NOTE[rk.value]!==undefined)mm.value=RAKU_NOTE[rk.value];});
   const ms=getEl('見積送付'); if(ms)ms.addEventListener('change',applyMitsumoriUrlVisibility_);
@@ -447,9 +448,11 @@ function applyCatering(){
   const c=getEl('ケータリング区分');
   const v=c?readCtl(c):'';
   host.querySelectorAll('.catering-detail').forEach(r=>r.classList.toggle('hidden', !!c && v==='なし'));
-  // 「持込」区分(持込業者名・持込内容)は、GPCMボードの飲食有無と同じく、ケータリング区分が
-  // 「持込」「併用」のときだけ表示する(区分の項目自体が無い場合は常に表示=フェイルセーフ)。
-  host.querySelectorAll('.cat[data-cat="持込"]').forEach(el=>el.classList.toggle('hidden', !!c && v!=='持込' && v!=='併用'));
+  // 「持込」区分(持込業者名・持込内容)は、GPCMボードと同じく「飲食有無」が「持込」「併用」の
+  // ときだけ表示する(飲食有無の項目自体が無い場合は常に表示=フェイルセーフ)。
+  const food=getEl('飲食有無');
+  const fv=food?readCtl(food):'';
+  host.querySelectorAll('.cat[data-cat="持込"]').forEach(el=>el.classList.toggle('hidden', !!food && fv!=='持込' && fv!=='併用'));
   const banner=document.getElementById('cateringBanner');
   if(!banner)return;
   if(c){banner.innerHTML='ケータリング区分：<b>'+esc(v||'未選択')+'</b> → '+(v&&v!=='なし'?'ケータリング関連の項目を表示':v==='なし'?'ケータリング関連の項目は非表示':'区分を選択してください');}
@@ -476,6 +479,18 @@ function ensureMitsumoriUrlItem_(){
   const idx=sec.items.findIndex(i=>i.item==='見積送付');
   sec.items.splice(idx+1,0,{item:'見積書URL',type:'urllist',options:null,value:'',memo:''});
 }
+// 「飲食有無」(自社｜持込｜併用)。GPCMボードと同じく、持込区分の表示切替と前日共有・
+// テキスト出力に使う。マスタに行が無い場合はコード側で「ケータリング区分」の直前に
+// 差し込む(マスタ側に同名の行がある場合はそちらを優先する)。
+function ensureFoodItem_(){
+  if(HEARING.some(s=>s.items.some(i=>i.item==='飲食有無')))return;
+  const sec=HEARING.find(s=>s.items.some(i=>i.item==='ケータリング区分'));
+  if(!sec)return;
+  const idx=sec.items.findIndex(i=>i.item==='ケータリング区分');
+  sec.items.splice(idx,0,{item:'飲食有無',type:'select',options:['自社','持込','併用'],value:'',memo:''});
+}
+// 飲食有無の出力表記(GPCMボードと同じく「併用」は「自:未定・持込」と書く)。
+function foodText_(){const f=q('飲食有無');return f==='併用'?'自:未定・持込':f;}
 // マスタの選択肢名を変えた項目について、保存済み案件の旧値を新しい選択肢へ読み替える。
 const LEGACY_SELECT_VALUES_={'見積送付':{'送付済':'作成済'}};
 // 見積書URL(urllist)の各行は「URL」または「URL<TAB>L」(L=連動用)の形で改行区切り
@@ -536,6 +551,7 @@ function buildOutput(includeHeader){
   L.push('ご予約日時：'+d+(tm?' '+tm:''));
   const headcount=q('来場人数');
   L.push('人数：'+(headcount?headcount+'名':''));
+  if(getEl('飲食有無'))L.push('飲食有無：'+foodText_());
   L.push('用途：'+q('用途'));
 
   const equipLines=[];
@@ -692,14 +708,19 @@ function tmplZenjitsu_(){
   ensureFreeFees_(b).filter(freeFeeOn_).forEach(o=>optLines.push('・'+(o.name||'(品目名未入力)')+'：あり'));
   const kbn=q('ケータリング区分');
   let cateringBlock='';
-  if(kbn&&kbn!=='なし'&&kbn!=='持込'){
+  // 【ケータリング詳細】は飲食有無が自社/併用、【持込詳細】は持込/併用のとき出す(GPCMと同じ考え方)。
+  // 飲食有無が未選択の古い案件は、従来どおりケータリング区分で判定する。
+  const fv=q('飲食有無');
+  const showCatering=fv?(fv==='自社'||fv==='併用'):(kbn&&kbn!=='なし'&&kbn!=='持込');
+  const showMochikomi=fv?(fv==='持込'||fv==='併用'):(kbn==='持込'||kbn==='併用');
+  if(showCatering){
     cateringBlock='\n【ケータリング詳細】\n'
       +'お食事プラン：'+q('食事プラン')+'\n'
       +'ドリンクプラン：'+q('ドリンクタイプ')+'\n'
       +'ケータリング時間：'+q('食事プラン（提供時間帯）')+'\n'
       +'飲み放題時間：'+q('ドリンクタイプ（提供時間帯）')+'\n';
   }
-  if(kbn==='持込'||kbn==='併用'){
+  if(showMochikomi){
     cateringBlock+='\n【持込詳細】\n'
       +'業者：'+q('持込業者名')+'\n'
       +'持込内容：'+q('持込内容')+'\n';
@@ -711,7 +732,7 @@ function tmplZenjitsu_(){
     +'担当者：'+withSama(q('担当者'))+'\n'
     +'ご予約日時：'+dateTime+'\n'
     +'人数：'+withN(q('来場人数')||'')+'\n'
-    +'ケータリング区分：'+kbn+'\n'
+    +'飲食有無：'+q('飲食有無')+'\n'
     +'レイアウト：'+layoutText_()+'\n'
     +'翌日レイアウト変更：'+(b.layoutNextEnabled?'あり':'なし')+'\n'
     +'事前レイアウト：'+(q('事前レイアウト')||'なし')+'\n'
@@ -1497,7 +1518,7 @@ function loadAllMasters_(cb){
     .withFailureHandler(function(err){console.warn('共通オプション取得失敗',err);STANDARD_OPTIONS=[];done();}).apiGetStandardOptions();
   google.script.run.withSuccessHandler(function(j){try{FAVORITE_VENUES=JSON.parse(j)||[];}catch(e){FAVORITE_VENUES=[];}done();})
     .withFailureHandler(function(err){console.warn('よく使う会場取得失敗',err);FAVORITE_VENUES=[];done();}).apiGetFavoriteVenues();
-  google.script.run.withSuccessHandler(function(j){try{HEARING=JSON.parse(j)||[];}catch(e){HEARING=[];}ensureMitsumoriUrlItem_();done();})
+  google.script.run.withSuccessHandler(function(j){try{HEARING=JSON.parse(j)||[];}catch(e){HEARING=[];}ensureMitsumoriUrlItem_();ensureFoodItem_();done();})
     .withFailureHandler(function(err){console.warn('ヒアリング項目マスタ取得失敗',err);HEARING=[];done();}).apiGetFormSchema();
   google.script.run.withSuccessHandler(function(j){try{STAFF_TEMPLATE=(JSON.parse(j)||{}).body||'';}catch(e){STAFF_TEMPLATE='';}done();})
     .withFailureHandler(function(err){console.warn('共有事項テンプレ取得失敗',err);STAFF_TEMPLATE='';done();}).apiGetStaffTemplate();
