@@ -665,7 +665,7 @@ function serveTimeText_(baseItem){
   var ranges=[base].concat(msRangesFromData_(extra)).filter(Boolean);
   if(ranges.length<=1)return base||'';
   var MK=['①','②','③','④','⑤','⑥','⑦','⑧'];
-  return ranges.map(function(r,i){return (MK[i]||'・')+'　'+r;}).join('\n');
+  return '\n'+ranges.map(function(r,i){return (MK[i]||'・')+'　'+r;}).join('\n');
 }
 function initMultiServe_(){
   document.querySelectorAll('#hearing .multi-serve').forEach(function(ms){
@@ -729,6 +729,8 @@ function tmplIsshukan_(){
   let drinkLines;
   if(/Aプラン/.test(drinkType))drinkLines='・飲み放題はＡプランです';
   else if(/Bプラン/.test(drinkType))drinkLines='・飲み放題はＢプランです';
+  else if(/旧プラン/.test(drinkType))drinkLines='・飲み放題は旧プランです（Ｂプランと同じ内容）';
+  else if(/ソフトドリンク/.test(drinkType))drinkLines='・飲み放題はソフトドリンクのみです';
   else drinkLines='・飲み放題は旧プランです（Ｂプランと同じ内容）\n・飲み放題はＡプランです\n・飲み放題はＢプランです';
   const shimbashi=/新橋/.test(b.venueName||'')?'\n\n※新橋のみ\n〇サイネージ表示名：なしor表示名':'';
   const mealR=parseTimeRangeStr_(q('食事プラン（提供時間帯）'));
