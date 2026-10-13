@@ -106,9 +106,11 @@ function saveConfPdf_(pdf) {
   return file;
 }
 
+// 属性値にも使えるよう " と ' も処理する(脆弱性診断 No.3)。
 function ce_(s) {
   return String(s == null ? '' : s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 /** サマリー/共有事項が2ページにまたがる際、行の途中で不自然に切れないよう、
@@ -131,21 +133,30 @@ function money_(v) {
 }
 
 /** 成約サマリー・立会スタッフ共有事項の編集内容(太字・文字色付きHTML)を、許可したタグのみに絞って通す */
+// 成約サマリー・立会スタッフ共有事項(太字・文字色付きHTML)を、許可したタグだけに作り直す。
+// 以前の置換方式は属性の区切りが空白以外の書き方や閉じていないタグを想定しておらず
+// すり抜ける余地があったため、タグを1つずつ取り出して作り直す(脆弱性診断 No.3)。
+var RICH_ALLOWED_ = ['b', 'strong', 'i', 'em', 'u', 'br', 'div', 'span'];
 function sanitizeRichHtml_(html) {
   html = String(html == null ? '' : html);
-  html = html.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '');
-  html = html.replace(/<(\/?)(b|strong|i|em|u|br|div)(\s[^>]*)?>/gi, function (m, close, tag) {
-    tag = tag.toLowerCase();
-    return close ? '</' + tag + '>' : (tag === 'br' ? '<br>' : '<' + tag + '>');
-  });
-  html = html.replace(/<span([^>]*)>/gi, function (m, attrs) {
-    var styleMatch = attrs.match(/style\s*=\s*"([^"]*)"/i);
-    var colorMatch = styleMatch && styleMatch[1].match(/color\s*:\s*(#[0-9a-fA-F]{3,6}|rgb\([^)]*\))/i);
-    return colorMatch ? '<span style="color:' + colorMatch[1] + '">' : '<span>';
-  });
-  html = html.replace(/<\/span>/gi, '</span>');
-  html = html.replace(/<(?!\/?(b|strong|i|em|u|br|div|span)\b)[^>]*>/gi, '');
-  return html;
+  html = html.replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, '');
+  var re = /<(\/?)([a-zA-Z][a-zA-Z0-9]*)([^<>]*)>/g, out = '', last = 0, m;
+  while ((m = re.exec(html))) {
+    out += richText_(html.slice(last, m.index)) + richTag_(m[1], m[2].toLowerCase(), m[3]);
+    last = re.lastIndex;
+  }
+  return out + richText_(html.slice(last));
+}
+function richText_(s) { return s.replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function richTag_(close, tag, attrs) {
+  if (RICH_ALLOWED_.indexOf(tag) < 0) return '';
+  if (tag === 'br') return close ? '' : '<br>';
+  if (close) return '</' + tag + '>';
+  if (tag === 'span') {
+    var c = /color\s*:\s*(#[0-9a-fA-F]{3,6}|rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\))/i.exec(attrs || '');
+    return c ? '<span style="color:' + c[1] + '">' : '<span>';
+  }
+  return '<' + tag + '>';
 }
 
 function confPayNote_(v) {

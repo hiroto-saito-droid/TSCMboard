@@ -18,7 +18,7 @@ function doGet(e) {
     return HtmlService.createHtmlOutputFromFile('Manual')
       .setTitle('TSCMボード操作マニュアル')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT); // 他サイトへの埋め込みを許さない(クリックジャッキング対策、脆弱性診断 No.6)
   }
   // 管理者(齋藤様)専用メモ。スタッフ向けマニュアル・アプリ本体のどこからもリンクしない
   // (このURLを知っている人だけがアクセスする想定)。本番/検証URLの区別を記載。
@@ -26,14 +26,17 @@ function doGet(e) {
     return HtmlService.createHtmlOutputFromFile('Admin')
       .setTitle('TSCMボード管理者メモ')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT); // 他サイトへの埋め込みを許さない(クリックジャッキング対策、脆弱性診断 No.6)
   }
   var t = HtmlService.createTemplateFromFile('Index');
-  t.initialCaseId = (e && e.parameter && e.parameter.case) ? e.parameter.case : '';
+  // Index.html はこの値を引用符の中にそのまま書き出す(<?!= ?>)。案件IDは
+  // Utilities.getUuid() の形式だけを通し、それ以外は捨てる(反射型XSS対策、脆弱性診断 No.1)。
+  var initialCaseId = (e && e.parameter && e.parameter.case) ? String(e.parameter.case).trim() : '';
+  t.initialCaseId = /^[0-9a-fA-F-]{36}$/.test(initialCaseId) ? initialCaseId : '';
   return t.evaluate()
     .setTitle('TSCM 管理ボード')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT); // 他サイトへの埋め込みを許さない(クリックジャッキング対策、脆弱性診断 No.6)
 }
 
 function include(filename) {
