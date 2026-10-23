@@ -29,7 +29,7 @@ function sanitizeRichHtmlClient_(html){
 function withSama(v){return v&&!/様$/.test(v)?v+'様':v;}
 function withN(v){return v&&!/名$/.test(v)?v+'名':v;}
 // ①ヒアリングシート上で、入力欄の右に単位・敬称を表示する項目(欄自体には含めない)。
-const SUFFIX_LABEL={'担当者':'様','来場人数':'名'};
+const SUFFIX_LABEL={'担当者':'様','来場人数':'名','お食事人数':'名','飲み放題のみ人数':'名'};
 const CAT_PALETTE=['#2563eb','#db2777','#059669','#d97706','#7c3aed','#0891b2','#be123c','#4d7c0f'];
 function catColor(idx){return CAT_PALETTE[idx%CAT_PALETTE.length];}
 let state={blocks:[{id:1,venueName:'',venueAddress:'',snap:null}],active:1,seq:1};
@@ -530,6 +530,28 @@ function ensureFoodItem_(){
   const idx=after>-1?after+1:sec.items.length;
   sec.items.splice(idx,0,{item:'飲食有無',type:'select',options:['自社','持込','併用'],value:'',memo:''});
 }
+// 「お食事人数」「飲み放題のみ人数」(#33、GPCMと揃える)。マスタに行が無い場合は
+// コード側で「来場人数」の直後に差し込む(来場人数→お食事人数→飲み放題のみ人数の順)。
+function ensureHeadcountItems_(){
+  const sec=HEARING.find(s=>s.cat==='基本情報')||HEARING.find(s=>s.items.some(i=>i.item==='来場人数'));
+  if(!sec)return;
+  ['お食事人数','飲み放題のみ人数'].forEach(function(name){
+    if(HEARING.some(s=>s.items.some(i=>i.item===name)))return;
+    const prev=(name==='お食事人数')?'来場人数':'お食事人数';
+    let idx=sec.items.findIndex(i=>i.item===prev);
+    idx=idx>-1?idx+1:sec.items.length;
+    sec.items.splice(idx,0,{item:name,type:'number',options:null,value:'',memo:''});
+  });
+}
+// 〇人数：300名(お食事人数：250名・飲み放題のみ：50名) のように内訳を併記する(#33、GPCMと同形)。
+function headcountLine_(){
+  const total=withN(q('来場人数')||'');
+  const meal=q('お食事人数'),drinkOnly=q('飲み放題のみ人数');
+  const parts=[];
+  if(meal)parts.push('お食事人数：'+withN(meal));
+  if(drinkOnly)parts.push('飲み放題のみ：'+withN(drinkOnly));
+  return parts.length?(total+'('+parts.join('・')+')'):total;
+}
 // 飲食有無の出力表記(GPCMボードと同じく「併用」は「自:未定・持込」と書く)。
 function foodText_(){const f=q('飲食有無');return f==='併用'?'自:未定・持込':f;}
 // マスタの選択肢名を変えた項目について、保存済み案件の旧値を新しい選択肢へ読み替える。
@@ -604,6 +626,7 @@ function buildOutput(includeHeader){
   if(cateringKind&&cateringKind!=='なし'){
     L.push('');L.push('【ケータリング詳細】');
     L.push('ケータリング区分：'+cateringKind);
+    L.push('お食事人数：'+(q('お食事人数')||'')+'名　飲み放題のみ：'+(q('飲み放題のみ人数')||'')+'名');  // GPCMと揃える(#33)
     const meal=q('食事プラン'); if(meal)L.push('食事プラン：'+meal);
     const mealTime=serveTimeText_('食事プラン（提供時間帯）'); if(mealTime)L.push('食事提供時間帯：'+mealTime);
     const drink=q('ドリンクタイプ'); if(drink)L.push('ドリンクタイプ：'+drink);
@@ -744,7 +767,7 @@ function tmplHoukoku_(){
     +'〇お食事提供時間帯：'+serveTimeText_('食事プラン（提供時間帯）')+'\n'
     +'〇飲み放題提供時間帯： '+serveTimeText_('ドリンクタイプ（提供時間帯）')+'(LO:15分前)\n'
     +'〇プラン\n・フード\n・飲み放題'+drinkExtNoteSuffix_()+'\n'
-    +'〇人数：'+(q('来場人数')||'')+'\n'
+    +'〇人数：'+headcountLine_()+'\n'
     +'〇【利用オプション】\n'+(tscmOptLines_().length?tscmOptLines_().join('\n'):'・なし')+'\n'
     +(tscmMochikomiLines_().length?(tscmMochikomiLines_().join('\n')+'\n'):'')
     +'〇決済方法（予定）：'+payMethodText_()+'\n'
@@ -775,7 +798,7 @@ function tmplIsshukan_(){
     +'〇ボードURL：'+(currentCaseId?(WEBAPP_BASE_URL+'?case='+encodeURIComponent(currentCaseId)):'（未保存のため未発行・先に保存してください）')+'\n'
     +'〇スペース名：'+(b.venueName||'')+'\n'
     +'〇利用日時：'+dateTime+'\n'
-    +'〇人数　： '+(q('来場人数')||'')+'名\n'
+    +'〇人数　： '+headcountLine_()+'\n'
     +'〇 ケータリングお食事プラン：'+mealLine+'\n'
     +'〇ドリンクプラン：\n'+drinkLines+'\n'
     +'〇ドリンクオプション： 乾杯スパークリングワイン：∔550円(税込)/1名 あり or なし\n'
@@ -846,7 +869,7 @@ function tmplZenjitsu_(){
     +(q('会社名')?('会社名：'+q('会社名')+'\n'):'')
     +'担当者：'+withSama(q('担当者'))+'\n'
     +'ご予約日時：'+dateTime+'\n'
-    +'人数：'+withN(q('来場人数')||'')+'\n'
+    +'人数：'+headcountLine_()+'\n'
     +'飲食有無：'+q('飲食有無')+'\n'
     +'レイアウト：'+layoutText_()+'\n'
     +'翌日レイアウト変更：'+(b.layoutNextEnabled?'あり':'なし')+'\n'
@@ -1639,7 +1662,7 @@ function loadAllMasters_(cb){
     .withFailureHandler(function(err){console.warn('共通オプション取得失敗',err);STANDARD_OPTIONS=[];done();}).apiGetStandardOptions();
   google.script.run.withSuccessHandler(function(j){try{FAVORITE_VENUES=JSON.parse(j)||[];}catch(e){FAVORITE_VENUES=[];}done();})
     .withFailureHandler(function(err){console.warn('よく使う会場取得失敗',err);FAVORITE_VENUES=[];done();}).apiGetFavoriteVenues();
-  google.script.run.withSuccessHandler(function(j){try{HEARING=JSON.parse(j)||[];}catch(e){HEARING=[];}ensureMitsumoriUrlItem_();ensureFoodItem_();done();})
+  google.script.run.withSuccessHandler(function(j){try{HEARING=JSON.parse(j)||[];}catch(e){HEARING=[];}ensureMitsumoriUrlItem_();ensureFoodItem_();ensureHeadcountItems_();done();})
     .withFailureHandler(function(err){console.warn('ヒアリング項目マスタ取得失敗',err);HEARING=[];done();}).apiGetFormSchema();
   google.script.run.withSuccessHandler(function(j){try{STAFF_TEMPLATE=(JSON.parse(j)||{}).body||'';}catch(e){STAFF_TEMPLATE='';}done();})
     .withFailureHandler(function(err){console.warn('共有事項テンプレ取得失敗',err);STAFF_TEMPLATE='';done();}).apiGetStaffTemplate();
