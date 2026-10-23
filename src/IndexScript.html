@@ -423,6 +423,11 @@ function renderHearing(){
       if(it.item==='持込内容'){
         extra='<div style="margin-top:6px"><div style="font-size:11px;color:#64748b;margin-bottom:2px">搬入・搬出時間（持込/併用時）</div><div style="display:flex;gap:6px;align-items:center;margin:2px 0"><span style="font-size:12px;width:36px">搬入</span>'+ctl({type:'timerange',item:'搬入時間帯',value:''})+'</div><div style="display:flex;gap:6px;align-items:center;margin:2px 0"><span style="font-size:12px;width:36px">搬出</span>'+ctl({type:'timerange',item:'搬出時間帯',value:''})+'</div></div>';
       }
+      // ドリンクタイプの直下に「飲み放題延長」チェック＋延長分数入力を出す(#32、GPCM#79移植)。
+      // 常時表示。延長分数はdata-item="飲み放題延長分数"でsnapshotに保存される。
+      if(it.item==='ドリンクタイプ'){
+        extra='<div class="drinkext" style="margin-top:4px"><label class="inl" style="font-size:12px"><input type="checkbox" class="de-chk"> 飲み放題延長</label><span class="de-min-wrap" style="display:none;margin-left:8px;font-size:12px">延長 <input type="number" class="de-min" data-item="飲み放題延長分数" min="0" step="5" style="width:70px"> 分</span></div>';
+      }
       return `<div class="${rowcls}"><div class="lbl">${esc(it.item)}${reqMark}</div>
         <div class="field"><div class="ctl">${ctl(it)}${suffix}</div>${extra}
         <input class="memo" type="text" value="${esc(memo)}" placeholder="備考メモ (任意)"></div></div>`;
@@ -459,6 +464,8 @@ function renderHearing(){
   const dateEl=getEl('利用日'); if(dateEl)dateEl.addEventListener('change',()=>{const ab=activeBlock();ab.snap=ab.snap||blankSnap();ab.snap.vals=ab.snap.vals||{};ab.snap.vals['利用日']=dateEl.value;renderVenueBar();});
   restore(b.snap);
   try{initMultiServe_();}catch(e){}
+  try{initDrinkExt_();}catch(e){}
+  try{applyDrinkExtVisibility_();}catch(e){}
   applyMitsumoriUrlVisibility_();
   applyCatering();
   updateStatusPill();
@@ -600,6 +607,7 @@ function buildOutput(includeHeader){
     const meal=q('食事プラン'); if(meal)L.push('食事プラン：'+meal);
     const mealTime=serveTimeText_('食事プラン（提供時間帯）'); if(mealTime)L.push('食事提供時間帯：'+mealTime);
     const drink=q('ドリンクタイプ'); if(drink)L.push('ドリンクタイプ：'+drink);
+    {const _dxn=drinkExtensionNote_();if(_dxn)L.push(_dxn);}  // ※飲み放題延長あり:〇〇分 (#32)
     const drinkTime=serveTimeText_('ドリンクタイプ（提供時間帯）'); if(drinkTime)L.push('飲み放題提供時間帯：'+drinkTime);
   }
 
@@ -665,7 +673,7 @@ function serveTimeText_(baseItem){
   var ranges=[base].concat(msRangesFromData_(extra)).filter(Boolean);
   if(ranges.length<=1)return base||'';
   var MK=['①','②','③','④','⑤','⑥','⑦','⑧'];
-  return ranges.map(function(r,i){return (MK[i]||'・')+'　'+r;}).join('\n');
+  return '\n'+ranges.map(function(r,i){return (MK[i]||'・')+'　'+r;}).join('\n');
 }
 function initMultiServe_(){
   document.querySelectorAll('#hearing .multi-serve').forEach(function(ms){
@@ -683,6 +691,29 @@ function initMultiServe_(){
     add.onclick=function(){data.value=(data.value?data.value+'\n':'')+'～';render();};
   });
 }
+// 飲み放題延長(#32、GPCM#79移植)。描画(restore)後にチェック状態を延長分数の値から復元する。
+function initDrinkExt_(){
+  document.querySelectorAll('#hearing .drinkext').forEach(function(de){
+    var chk=de.querySelector('.de-chk'),wrap=de.querySelector('.de-min-wrap'),min=de.querySelector('.de-min');
+    if(!chk||!wrap||!min)return;
+    var on=!!(String(min.value||'').trim());
+    chk.checked=on; wrap.style.display=on?'inline':'none';
+    chk.onchange=function(){var show=chk.checked;wrap.style.display=show?'inline':'none';if(!show)min.value='';};
+  });
+}
+// 飲み放題延長の入力枠は常時表示でよい(#32)。
+function applyDrinkExtVisibility_(){
+  var host=document.getElementById('hearing'); if(!host)return;
+  host.querySelectorAll('.drinkext').forEach(function(de){ de.style.display='block'; });
+}
+// 飲み放題延長の注記(本予約サマリ等すべてのドリンク出力に付記。#32)。延長分数が1分以上のときのみ。
+function drinkExtensionNote_(){
+  var min=parseInt(String(q('飲み放題延長分数')||'').trim(),10);
+  if(!(min>0))return '';
+  return '※飲み放題延長あり:'+min+'分';
+}
+// 文字列連結テンプレート用: 注記があれば「改行＋注記」を返す(無ければ空文字)。
+function drinkExtNoteSuffix_(){var n=drinkExtensionNote_();return n?('\n'+n):'';}
 function tscmOptLines_(){
   var b=activeBlock();var L=[];
   var proj=q('プロジェクター・スクリーン');if(proj&&proj!=='なし'&&proj!=='無し')L.push('・プロジェクター・スクリーン：'+proj);
@@ -712,7 +743,7 @@ function tmplHoukoku_(){
     +'〇利用日時：'+dateTime+'\n'
     +'〇お食事提供時間帯：'+serveTimeText_('食事プラン（提供時間帯）')+'\n'
     +'〇飲み放題提供時間帯： '+serveTimeText_('ドリンクタイプ（提供時間帯）')+'(LO:15分前)\n'
-    +'〇プラン\n・フード\n・飲み放題\n'
+    +'〇プラン\n・フード\n・飲み放題'+drinkExtNoteSuffix_()+'\n'
     +'〇人数：'+(q('来場人数')||'')+'\n'
     +'〇【利用オプション】\n'+(tscmOptLines_().length?tscmOptLines_().join('\n'):'・なし')+'\n'
     +(tscmMochikomiLines_().length?(tscmMochikomiLines_().join('\n')+'\n'):'')
@@ -729,7 +760,10 @@ function tmplIsshukan_(){
   let drinkLines;
   if(/Aプラン/.test(drinkType))drinkLines='・飲み放題はＡプランです';
   else if(/Bプラン/.test(drinkType))drinkLines='・飲み放題はＢプランです';
+  else if(/旧プラン/.test(drinkType))drinkLines='・飲み放題は旧プランです（Ｂプランと同じ内容）';
+  else if(/ソフトドリンク/.test(drinkType))drinkLines='・飲み放題はソフトドリンクのみです';
   else drinkLines='・飲み放題は旧プランです（Ｂプランと同じ内容）\n・飲み放題はＡプランです\n・飲み放題はＢプランです';
+  drinkLines+=drinkExtNoteSuffix_();  // ※飲み放題延長あり:〇〇分 (#32)
   const shimbashi=/新橋/.test(b.venueName||'')?'\n\n※新橋のみ\n〇サイネージ表示名：なしor表示名':'';
   const mealR=parseTimeRangeStr_(q('食事プラン（提供時間帯）'));
   const drinkR=parseTimeRangeStr_(q('ドリンクタイプ（提供時間帯）'));
@@ -795,7 +829,7 @@ function tmplZenjitsu_(){
   if(showCatering){
     cateringBlock='\n【ケータリング詳細】\n'
       +'お食事プラン：'+q('食事プラン')+'\n'
-      +'ドリンクプラン：'+q('ドリンクタイプ')+'\n'
+      +'ドリンクプラン：'+q('ドリンクタイプ')+drinkExtNoteSuffix_()+'\n'
       +'ケータリング時間：'+serveTimeText_('食事プラン（提供時間帯）')+'\n'
       +'飲み放題時間：'+serveTimeText_('ドリンクタイプ（提供時間帯）')+'\n';
   }
@@ -862,7 +896,7 @@ function tmplYoyakuFlow_(){
     cateringBlock='■ケータリング内容\n想定のプランで記載しておりますが、修正があれば赤字部分の修正をお願いします。\n\n'
       +'・人数　： '+(q('来場人数')||'')+'名\n'
       +'・ケータリングお食事プラン：'+(q('食事プラン')||'')+'\n'
-      +'・ドリンクプラン：'+drinkLine+'\n'
+      +'・ドリンクプラン：'+drinkLine+drinkExtNoteSuffix_()+'\n'
       +'・ドリンクオプション： 乾杯スパークリングワイン：∔550円(税込)/1名 あり or なし\n'
       +'　　　　　　　　　　　 乾杯シャンパン：+1,100円(税込)/1名 あり or なし\n'
       +'・お食事提供時間帯：'+mealTimeStr+'\n'
@@ -1051,13 +1085,19 @@ function showImgFull_(src){
 function hideImgFull_(){
   const ov=document.getElementById('imgFullOverlay');if(ov)ov.classList.remove('show');
 }
-function previewImg(input,key){
-  const f=input.files&&input.files[0];const box=document.getElementById(key+'-preview');const nm=document.getElementById(key+'-name');if(!f)return;
+function handleLayoutFile_(f,key){
+  if(!f)return;
+  if(!/^image\//.test(f.type||'')){alert('画像ファイル（PNG・JPEG等）をドロップしてください。');return;}
+  const box=document.getElementById(key+'-preview');const nm=document.getElementById(key+'-name');
   const rd=new FileReader();rd.onload=e=>{
-    box.innerHTML='<img src="'+e.target.result+'" onclick="showImgFull_(this.src)">';if(nm)nm.textContent=f.name;
+    if(box)box.innerHTML='<img src="'+e.target.result+'" onclick="showImgFull_(this.src)">';if(nm)nm.textContent=f.name;
     const b=activeBlock();if(!b.layoutImgs)b.layoutImgs={};b.layoutImgs[key]={data:e.target.result,name:f.name};
   };rd.readAsDataURL(f);
 }
+function previewImg(input,key){const f=input.files&&input.files[0];if(!f)return;handleLayoutFile_(f,key);}
+function layoutDragOver_(ev){ev.preventDefault();ev.currentTarget.style.outline='2px dashed #1d4ed8';ev.currentTarget.style.background='#eff6ff';}
+function layoutDragLeave_(ev){ev.currentTarget.style.outline='';ev.currentTarget.style.background='';}
+function layoutDrop_(ev,key){ev.preventDefault();ev.currentTarget.style.outline='';ev.currentTarget.style.background='';var dt=ev.dataTransfer;var f=dt&&dt.files&&dt.files[0];if(f)handleLayoutFile_(f,key);}
 function clearImg(key){
   document.getElementById(key+'-preview').innerHTML='ファイルを選択してください';const nm=document.getElementById(key+'-name');if(nm)nm.textContent='';
   const b=activeBlock();if(b.layoutImgs)delete b.layoutImgs[key];
@@ -1069,11 +1109,11 @@ function renderLayout(){
   document.getElementById('layout').innerHTML=`<div class="banner">レイアウト図（会場：<b>${esc(b.venueName||'(会場未入力)')}</b>）。ファイルから直接アップロード。アップロードした画像は利用確認書PDFにも反映されます。</div>
   <div class="layoutbox"><div style="font-weight:800;color:#1e293b;margin-bottom:4px">当日レイアウト</div>
     <div class="uploadbar"><label class="filebtn">📁 ファイルを選択<input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp" onchange="previewImg(this,'day')"></label><button class="clearbtn" onclick="clearImg('day')">クリア</button><span id="day-name" style="font-size:11px;color:#94a3b8">${esc(imgs.day?imgs.day.name:'')}</span></div>
-    <div id="day-preview" class="imgslot">${imgs.day?'<img src="'+imgs.day.data+'" onclick="showImgFull_(this.src)">':'ファイルを選択してください'}</div>
+    <div id="day-preview" class="imgslot" ondragover="layoutDragOver_(event)" ondragleave="layoutDragLeave_(event)" ondrop="layoutDrop_(event,'day')">${imgs.day?'<img src="'+imgs.day.data+'" onclick="showImgFull_(this.src)">':'ファイルを選択、またはここにドラッグ＆ドロップ'}</div>
     <div style="margin-top:10px"><label class="inl" style="margin-bottom:4px">画像メモ</label><textarea placeholder="レイアウト補足…" oninput="setLayoutMemo('day',this.value)">${esc(memo.day||'')}</textarea></div></div>
   <div class="layoutbox"><div style="font-weight:800;color:#1e293b;margin-bottom:4px">次回レイアウト作成 <select style="margin-left:8px" onchange="setNextLayoutEnabled(this.value)"><option ${!nextOn?'selected':''}>なし</option><option ${nextOn?'selected':''}>あり</option></select></div>
     <div class="uploadbar"><label class="filebtn">📁 ファイルを選択<input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp" onchange="previewImg(this,'next')"></label><button class="clearbtn" onclick="clearImg('next')">クリア</button><span id="next-name" style="font-size:11px;color:#94a3b8">${esc(imgs.next?imgs.next.name:'')}</span></div>
-    <div id="next-preview" class="imgslot">${imgs.next?'<img src="'+imgs.next.data+'" onclick="showImgFull_(this.src)">':'ファイルを選択してください'}</div>
+    <div id="next-preview" class="imgslot" ondragover="layoutDragOver_(event)" ondragleave="layoutDragLeave_(event)" ondrop="layoutDrop_(event,'next')">${imgs.next?'<img src="'+imgs.next.data+'" onclick="showImgFull_(this.src)">':'ファイルを選択、またはここにドラッグ＆ドロップ'}</div>
     <div style="margin-top:10px"><label class="inl" style="margin-bottom:4px">画像メモ（次回）</label><textarea placeholder="次回レイアウト備考…" oninput="setLayoutMemo('next',this.value)">${esc(memo.next||'')}</textarea></div>
     <div style="font-size:11px;color:#94a3b8;margin-top:6px">「次回レイアウト作成」が「あり」の場合のみ、PDFに反映されます。</div></div>
   <div class="cfg"><h3>◆レイアウト図PDF作成</h3>
