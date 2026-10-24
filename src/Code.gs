@@ -97,25 +97,51 @@ function apiExtractMitsumoriAmount(base64Data, fileName) {
  */
 function apiExtractMitsumoriFromUrl(shareUrl) {
   try {
-    shareUrl = String(shareUrl || '').trim();
+    // 末尾に紛れ込んだ全角ラベル等(例「）参照」)や空白以降を落とす(atトークンが汚れると
+    // 認証が外れ、ジョブカンが確認ログインへ回して読み取れなくなる。#82でGPCMと共通化)。
+    shareUrl = String(shareUrl || '').trim().replace(/[^\x21-\x7E][\s\S]*$/, '');
     var idMatch = /share_id=(\d+)/.exec(shareUrl);
     if (!shareUrl || !idMatch || !/^https:\/\/in\.jobcan\.jp\//.test(shareUrl)) {
       return { ok: false, error: 'ジョブカンの共有リンクの形式が正しくありません(in.jobcan.jp の share_id 付きURLを貼り付けてください)。' };
     }
     var shareId = idMatch[1];
-    var resp1 = UrlFetchApp.fetch(shareUrl, { followRedirects: true, muteHttpExceptions: true });
+    // 共有リンクは esauth/nredirect → reader の順に302転送し、途中の応答でセッションCookie(sid)が
+    // 発行される。followRedirects:true だと最終応答のヘッダしか見えずCookieを取りこぼすため、
+    // 1段ずつ手動でたどり(in.jobcan.jp内のみ)、各段のSet-Cookieを集める(GPCMのIssue#76版を移植)。
+    var jobcanRe = /^https:\/\/in\.jobcan\.jp\//;
+    var cookies = {}, url1 = shareUrl, resp1 = null;
+    for (var hop = 0; hop < 5; hop++) {
+      resp1 = UrlFetchApp.fetch(url1, { followRedirects: false, muteHttpExceptions: true,
+        headers: Object.keys(cookies).length ? { Cookie: Object.keys(cookies).map(function (k) { return k + '=' + cookies[k]; }).join('; ') } : {} });
+      var h1 = resp1.getAllHeaders();
+      var sc = h1['Set-Cookie'] || [];
+      (Array.isArray(sc) ? sc : [sc]).forEach(function (c) {
+        var kv = String(c).split(';')[0], eq = kv.indexOf('=');
+        if (eq > 0) cookies[kv.slice(0, eq).trim()] = kv.slice(eq + 1).trim();
+      });
+      var code1 = resp1.getResponseCode();
+      if (code1 < 300 || code1 >= 400) break;
+      var loc = String(h1['Location'] || h1['location'] || '');
+      if (loc.indexOf('/') === 0 && loc.indexOf('//') !== 0) loc = 'https://in.jobcan.jp' + loc;
+      if (!jobcanRe.test(loc)) {
+        return { ok: false, error: '共有リンクの転送先がジョブカン以外だったため、取得を止めました。' };
+      }
+      url1 = loc;
+    }
     if (resp1.getResponseCode() !== 200) {
       return { ok: false, error: '共有リンクへのアクセスに失敗しました(HTTP ' + resp1.getResponseCode() + ')。リンクの有効期限が切れていないかご確認ください。' };
     }
-    var cookieHeader = resp1.getAllHeaders()['Set-Cookie'];
-    if (!cookieHeader) {
+    if (!Object.keys(cookies).length) {
       return { ok: false, error: 'セッションCookieの取得に失敗しました。リンクが正しいかご確認ください。' };
     }
-    var cookieArr = Array.isArray(cookieHeader) ? cookieHeader : [cookieHeader];
-    var cookieStr = cookieArr.map(function (c) { return c.split(';')[0]; }).join('; ');
+    var cookieStr = Object.keys(cookies).map(function (k) { return k + '=' + cookies[k]; }).join('; ');
     var previewUrl = 'https://in.jobcan.jp/es01/TransShareReader/preview?share_id=' + encodeURIComponent(shareId);
-    var resp2 = UrlFetchApp.fetch(previewUrl, { headers: { Cookie: cookieStr }, muteHttpExceptions: true });
-    if (resp2.getResponseCode() !== 200) {
+    var resp2 = UrlFetchApp.fetch(previewUrl, { headers: { Cookie: cookieStr }, followRedirects: false, muteHttpExceptions: true });
+    var code2 = resp2.getResponseCode();
+    if (code2 >= 300 && code2 < 400) {
+      return { ok: false, error: 'ジョブカンが見積書の確認ログインを求めています。共有リンクの有効期限・共有設定をご確認いただくか、手入力・PDFアップロードをお試しください。' };
+    }
+    if (code2 !== 200) {
       return { ok: false, error: '見積書内容の取得に失敗しました(HTTP ' + resp2.getResponseCode() + ')。' };
     }
     var html = resp2.getContentText('UTF-8');
@@ -153,7 +179,7 @@ function cs_stripTagsDecode_(s) {
 function cs_parseMitsumoriHtml_(html) {
   var items = [];
   var blocks = [];
-  var rowRe = /<tr class="normal">([\s\S]*?)<\/tr>/g;
+  var rowRe = /<tr class="(?:normal|discount)">([\s\S]*?)<\/tr>/g;  // 値引き・相殺行(discount)も拾う(#82)
   var m;
   while ((m = rowRe.exec(html))) {
     blocks.push({ idx: m.index, type: 'item', body: m[1] });

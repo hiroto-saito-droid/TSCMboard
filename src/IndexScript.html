@@ -752,7 +752,7 @@ function tscmMochikomiLines_(){
   var hi=q('搬入時間帯'),ho=q('搬出時間帯');if(hi)L.push('搬入：'+hi);if(ho)L.push('搬出：'+ho);
   return L;
 }
-function tmplHoukoku_(){
+function tmplHoukoku_(amountLine){
   const b=activeBlock();
   const dateTime=formatDateJp_(q('利用日'))+(q('利用時間')||'〇〇：〇〇～〇〇：〇〇');
   const mealR=parseTimeRangeStr_(q('食事プラン（提供時間帯）'));
@@ -764,6 +764,7 @@ function tmplHoukoku_(){
     +'〇見積書URL：'+mitsumoriLinkUrl_()+'\n'
     +'〇スペース名：'+(b.venueName||'')+'\n'
     +'〇利用日時：'+dateTime+'\n'
+    +(amountLine||'')
     +'〇お食事提供時間帯：'+serveTimeText_('食事プラン（提供時間帯）')+'\n'
     +'〇飲み放題提供時間帯： '+serveTimeText_('ドリンクタイプ（提供時間帯）')+'(LO:15分前)\n'
     +'〇プラン\n・フード\n・飲み放題'+drinkExtNoteSuffix_()+'\n'
@@ -774,7 +775,7 @@ function tmplHoukoku_(){
     +'〇最終確定日：〇月●日（〇）\n\n'
     +'ご対応の程よろしくお願いいたします。';
 }
-function tmplIsshukan_(){
+function tmplIsshukan_(amountLine){
   const b=activeBlock();
   const dateTime=formatDateJp_(q('利用日'))+(q('利用時間')||'');
   const mealPlan=q('食事プラン');
@@ -798,6 +799,7 @@ function tmplIsshukan_(){
     +'〇ボードURL：'+(currentCaseId?(WEBAPP_BASE_URL+'?case='+encodeURIComponent(currentCaseId)):'（未保存のため未発行・先に保存してください）')+'\n'
     +'〇スペース名：'+(b.venueName||'')+'\n'
     +'〇利用日時：'+dateTime+'\n'
+    +(amountLine||'')
     +'〇人数　： '+headcountLine_()+'\n'
     +'〇 ケータリングお食事プラン：'+mealLine+'\n'
     +'〇ドリンクプラン：\n'+drinkLines+'\n'
@@ -1048,7 +1050,24 @@ function tmplYoyakuFlow_(){
     +'引き続きよろしくお願い申し上げます。';
 }
 function doExportTmpl(kind){
-  const fn=kind==='houkoku'?tmplHoukoku_:kind==='isshukan'?tmplIsshukan_:kind==='yoyakuflow'?tmplYoyakuFlow_:tmplZenjitsu_;
+  // 成約報告・1週間前共有は、連動用ジョブカンから「合計金額だけ」を読み取り、
+  // 利用日時の下に金額行を入れる(成約報告=「〇現時点での金額」、1週間前=「〇確定金額」。#33)。
+  if(kind==='houkoku'||kind==='isshukan'){
+    const t=document.getElementById('outText');
+    const label=(kind==='houkoku')?'現時点での金額':'確定金額';
+    const build=(amountLine)=>{t.value=(kind==='houkoku'?tmplHoukoku_(amountLine):tmplIsshukan_(amountLine));};
+    const url=mitsumoriLinkUrl_();
+    if(!url){build('');return;}
+    t.value='見積書(ジョブカン)の金額を読み取り中…';
+    google.script.run.withSuccessHandler(r=>{
+      let line='';
+      if(r&&r.ok&&r.amount!==''&&r.amount!=null){line='〇'+label+'：'+Number(String(r.amount).replace(/,/g,'')).toLocaleString()+'円\n';}
+      else{line='〇'+label+'：（見積書の読み取りに失敗しました。連動用URL・有効期限をご確認ください）\n';}
+      build(line);
+    }).withFailureHandler(()=>{build('〇'+label+'：（見積書の読み取りに失敗しました）\n');}).apiExtractMitsumoriFromUrl(url);
+    return;
+  }
+  const fn=kind==='yoyakuflow'?tmplYoyakuFlow_:tmplZenjitsu_;
   document.getElementById('outText').value=fn();
 }
 // LINE等の一部アプリはコピー元がLF(\n)のみだと改行のたびに空行が入って
